@@ -62,6 +62,9 @@ class MarioAgent(Agent):
         self.last_action = None
         random.seed(0)
         self.Q = QNN(nactions=12, input_size=(self.state_dim_x*self.state_dim_y), max_experiences=500, gamma=0.6, alpha=0.2)
+        self.transition_matrix = {}
+
+        self.last_enc_state = None
 	
     def agent_start(self,observation):
         self.step_number = 0
@@ -74,10 +77,23 @@ class MarioAgent(Agent):
         self.step_number += 1
         self.total_steps += 1
         act = self.getAction(observation)
+
+        enc_state = tuple(self.stateEncoder(observation))
+        if enc_state not in self.transition_matrix:
+            self.transition_matrix[enc_state] = {}
+        if self.last_enc_state:
+            if enc_state not in self.transition_matrix[self.last_enc_state]:
+                self.transition_matrix[self.last_enc_state][enc_state] = 1
+            else:
+                self.transition_matrix[self.last_enc_state][enc_state] += 1
+
         if (not self.policy_frozen):
             self.update(observation, act, reward)
         self.last_state = observation
         self.last_action = act
+
+        self.last_enc_state = enc_state
+
         return act
 	
     def agent_end(self,reward):
@@ -188,7 +204,7 @@ class MarioAgent(Agent):
 
     def getAction(self, observation):
         act = self.qnnAction(observation)
-	return act
+        return act
 
     def update(self, observation, action, reward):
         self.qnnUpdate(observation, action, reward)
@@ -228,6 +244,8 @@ class MarioAgent(Agent):
             if (x < 0 or x >= self.state_dim_x or y < 0 or y >= self.state_dim_y): #skip monsters farther away
                 continue
             s[y*self.state_dim_x + x] = -2
+
+            #Add the state to our list of states
         return s
 
     def stateEncoderMultiple(self, observation):
