@@ -43,7 +43,7 @@ backgroundLayer = {'\0': 2, '1': 1, '2': 1, '3': 1, '4': 1, '5': 1, '6': 1, '7':
 rewardLayer = {'\0': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, 'M': 0, '$': 1, 'b': 1, '?': 1, '|': 1, '!': 2, ' ': 0, '\n': 0}
 
 class MarioAgent(Agent):
-	
+    
     def agent_init(self,taskSpecString):
         self.policy_frozen = False
         self.total_steps = 0
@@ -65,12 +65,12 @@ class MarioAgent(Agent):
         self.transition_matrix = {}
 
         self.last_enc_state = None
-	
+
     def agent_start(self,observation):
         self.step_number = 0
         self.trial_start = time.clock()
         return self.getAction(observation)
-	
+    
     def agent_step(self,reward, observation):
         #self.printFullState(observation)
         #self.printMarioState(observation)
@@ -79,6 +79,7 @@ class MarioAgent(Agent):
         act = self.getAction(observation)
 
         enc_state = tuple(self.stateEncoder(observation))
+        #  print enc_state
         if enc_state not in self.transition_matrix:
             self.transition_matrix[enc_state] = {}
         if self.last_enc_state:
@@ -91,22 +92,19 @@ class MarioAgent(Agent):
             self.update(observation, act, reward)
         self.last_state = observation
         self.last_action = act
-
-        self.last_enc_state = enc_state
-
         return act
-	
+    
     def agent_end(self,reward):
         time_passed = time.clock() - self.trial_start
         print "ended after " + str(self.total_steps) + " total steps"
         print "average " + str(self.step_number/time_passed) + " steps per second"
-	
+    
     def agent_cleanup(self):
         pass
-	
+    
     def agent_freeze(self):
         pass
-	
+    
     def agent_message(self,inMessage):
         if inMessage.startswith("freeze_learning"):
             self.policy_frozen=True
@@ -244,8 +242,6 @@ class MarioAgent(Agent):
             if (x < 0 or x >= self.state_dim_x or y < 0 or y >= self.state_dim_y): #skip monsters farther away
                 continue
             s[y*self.state_dim_x + x] = -2
-
-            #Add the state to our list of states
         return s
 
     def stateEncoderMultiple(self, observation):
