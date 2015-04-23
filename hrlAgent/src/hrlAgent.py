@@ -135,6 +135,9 @@ class MarioAgent(Agent):
         if inMessage.startswith("reset_q"):
             self.Q = QNN(nactions=12, input_size=(self.state_dim_x*self.state_dim_y), max_experiences=500, gamma=0.6, alpha=0.2)
             return "message understood, reseting q-function"
+        if inMessage.startswith("savetransmatrix"):
+            transmatrixfile = open("transmatrix.dat","w")
+            pickle.dump(self.transition_matrix,transmatrixfile)
         return None
 
     def getMonsters(self, observation):
