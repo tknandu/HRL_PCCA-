@@ -65,6 +65,7 @@ class MarioAgent(Agent):
         self.transition_matrix = {}
 
         self.last_enc_state = None
+        self.last_enc_action = None
 
     def agent_start(self,observation):
         self.step_number = 0
@@ -79,17 +80,23 @@ class MarioAgent(Agent):
         act = self.getAction(observation)
 
         enc_state = tuple(self.stateEncoder(observation))
-        #  print enc_state
+        enc_action = self.actionEncoder(act)
+
         if enc_state not in self.transition_matrix:
             self.transition_matrix[enc_state] = {}
-        if self.last_enc_state:
-            if enc_state not in self.transition_matrix[self.last_enc_state]:
-                self.transition_matrix[self.last_enc_state][enc_state] = 1
+        if self.last_enc_action:
+            if self.last_enc_action not in self.transition_matrix[self.last_enc_state]:
+                self.transition_matrix[self.last_enc_state][self.last_enc_action] = {enc_state:1}
+            elif enc_state not in self.transition_matrix[self.last_enc_state][self.last_enc_action]:
+                self.transition_matrix[self.last_enc_state][self.last_enc_action][enc_state] = 1
             else:
-                self.transition_matrix[self.last_enc_state][enc_state] += 1
+                self.transition_matrix[self.last_enc_state][self.last_enc_action][enc_state] += 1
 
         if (not self.policy_frozen):
             self.update(observation, act, reward)
+
+        self.last_enc_state = enc_state
+        self.last_enc_action = enc_action
         self.last_state = observation
         self.last_action = act
         return act
