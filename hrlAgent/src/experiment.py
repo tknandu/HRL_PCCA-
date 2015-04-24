@@ -12,8 +12,9 @@ def trainAgent():
     exp = 1.0 # epsilon?
 
     totalSteps = 0
+    """
     raw_results = []
-    RLGlue.RL_agent_message("freeze_learning");
+    RLGlue.RL_agent_message("freeze_learning")
     for i in range(episodesToRun):
         RLGlue.RL_agent_message("set_exploring " + str(exp)) 
         RLGlue.RL_episode(2000)
@@ -30,7 +31,8 @@ def trainAgent():
     results1 = []
     for i in range(100,episodesToRun):
         results1.append(sum(raw_results[i-100:i])/100.0)
-
+    """
+    
     raw_results = []
     for i in range(episodesToRun):
         if (i % 100 == 0):
@@ -51,7 +53,7 @@ def trainAgent():
     for i in range(100,episodesToRun):
         results2.append(sum(raw_results[i-100:i])/100.0)
 
-    plt.plot(results1, color='red', label='Random')
+#    plt.plot(results1, color='red', label='Random')
     plt.plot(results2, color='blue', label='Neural Q-Network')
     plt.xlabel('Episode Number')
     plt.ylabel('Mean Total Reward over 100 Episodes')
@@ -61,7 +63,8 @@ def trainAgent():
 def testAgent():
     episodesToRun = 50
     totalSteps = 0
-    RLGlue.RL_agent_message("freeze learning");
+
+    RLGlue.RL_agent_message("freeze learning")
     for i in range(episodesToRun):
         RLGlue.RL_episode(2000)
         thisSteps = RLGlue.RL_num_steps()
@@ -71,6 +74,7 @@ def testAgent():
         totalSteps += thisSteps
     print "Total steps : %d\n" % (totalSteps)
     RLGlue.RL_agent_message("unfreeze learning");
+
 
 def main():
     whichTrainingMDP = 0
@@ -85,7 +89,7 @@ def main():
     instance - 0..9, determines which Mario you run.    
     '''
 
-    loadMario(False, False, 3, 2, 1, whichTrainingMDP);
+    loadMario(True, True, 3, 2, 1, whichTrainingMDP)
 
     RLGlue.RL_init()
 
@@ -94,6 +98,8 @@ def main():
     trainAgent()
 
     #RLGlue.RL_agent_message("save_policy agents/exampleAgent.dat")
+
+    RLGlue.RL_agent_message("savetransmatrix")
 
     #testAgent()
 
