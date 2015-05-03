@@ -8,6 +8,9 @@ from rlglue.types import Observation
 from rlglue.agent import AgentLoader as AgentLoader
 import numpy as np
 from qnn import QNN
+from pcca import PCCA
+from deep_qnn import Deep_QNN
+from tnn import TNN
 
 class Monster:
     def __init__(self):
@@ -58,18 +61,29 @@ class MarioAgent(Agent):
         else:
             self.state_dim_x = 20
             self.state_dim_y = 12
+
         self.last_state = None
         self.last_action = None
         random.seed(0)
-        self.Q = QNN(nactions=12, input_size=(self.state_dim_x*self.state_dim_y), max_experiences=500, gamma=0.6, alpha=0.2)
-        self.transition_matrix = {}
+        
+        #self.Q = QNN(nactions=12, input_size=(self.state_dim_x*self.state_dim_y), max_experiences=500, gamma=0.6, alpha=0.2)
+        self.Q = Deep_QNN(nactions=12, input_size=(self.state_dim_x*self.state_dim_y), max_experiences=500, gamma=0.6, alpha=0.2)
+        self.T = TNN(input_size= 4, max_experiences=500, alpha=0.2)
 
+        #self.clusterer = PCCA()
+
+        self.transition_matrix = {} # this is actually only counts
+        self.transiton_probs = {} # actual probabilities
         self.last_enc_state = None
         self.last_enc_action = None
 
     def agent_start(self,observation):
         self.step_number = 0
         self.trial_start = time.clock()
+
+        # At the start of each episode, run PCCA
+        #   chi_matrix = self.clusterer()
+
         return self.getAction(observation)
     
     def agent_step(self,reward, observation):
@@ -79,24 +93,24 @@ class MarioAgent(Agent):
         self.total_steps += 1
         act = self.getAction(observation)
 
-        enc_state = tuple(self.stateEncoder(observation))
-        enc_action = self.actionEncoder(act)
-
-        if enc_state not in self.transition_matrix:
-            self.transition_matrix[enc_state] = {}
-        if self.last_enc_action:
-            if self.last_enc_action not in self.transition_matrix[self.last_enc_state]:
-                self.transition_matrix[self.last_enc_state][self.last_enc_action] = {enc_state:1}
-            elif enc_state not in self.transition_matrix[self.last_enc_state][self.last_enc_action]:
-                self.transition_matrix[self.last_enc_state][self.last_enc_action][enc_state] = 1
-            else:
-                self.transition_matrix[self.last_enc_state][self.last_enc_action][enc_state] += 1
+        if (not self.transiton_learning_frozen):
+            enc_state = tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(observation)))
+            enc_action = self.actionEncoder(act)        
+            if enc_state not in self.transition_matrix:
+                self.transition_matrix[enc_state] = {}
+            if self.last_enc_action:
+                if self.last_enc_action not in self.transition_matrix[self.last_enc_state]:
+                    self.transition_matrix[self.last_enc_state][self.last_enc_action] = {enc_state:1}
+                elif enc_state not in self.transition_matrix[self.last_enc_state][self.last_enc_action]:
+                    self.transition_matrix[self.last_enc_state][self.last_enc_action][enc_state] = 1
+                else:
+                    self.transition_matrix[self.last_enc_state][self.last_enc_action][enc_state] += 1
+            self.last_enc_state = enc_state
+            self.last_enc_action = enc_action
 
         if (not self.policy_frozen):
             self.update(observation, act, reward)
 
-        self.last_enc_state = enc_state
-        self.last_enc_action = enc_action
         self.last_state = observation
         self.last_action = act
         return act
@@ -142,10 +156,28 @@ class MarioAgent(Agent):
         if inMessage.startswith("reset_q"):
             self.Q = QNN(nactions=12, input_size=(self.state_dim_x*self.state_dim_y), max_experiences=500, gamma=0.6, alpha=0.2)
             return "message understood, reseting q-function"
-        if inMessage.startswith("savetransmatrix"):
-            transmatrixfile = open("transmatrix.dat","w")
-            pickle.dump(self.transition_matrix,transmatrixfile)
+
+        # Added now
+        if inMessage.startswith("freeze_transition_learning"):
+            self.transiton_learning_frozen=True
+            return "message understood, transiton learning frozen"    
+        if inMessage.startswith("unfreeze_transition_learning"):
+            self.transiton_learning_frozen=False
+            return "message understood, transiton learning unfrozen"        
         return None
+        if inMessage.startswith("train_TNN"):
+            print 'Training TNN'
+            self.trainTNN()
+        if inMessage.startswith("savetransmatrix"):
+            splitString=inMessage.split(" ")
+            self.saveTprobs(splitString[1])
+            print "Saved.";
+            return "message understood, saving Tprobs"
+        if inMessage.startswith("loadtransmatrix"):
+            splitString=inMessage.split(" ")
+            self.loadTprobs(splitString[1])
+            print "Loaded.";
+            return "message understood, loading Tprobs"
 
     def getMonsters(self, observation):
         monsters = []
@@ -340,6 +372,21 @@ class MarioAgent(Agent):
     def loadQFun(self, fileName):
         theFile = open(fileName, "r")
         self.Q = pickle.load(theFile)
+        theFile.close()
+
+    # Added now
+    def train_TNN(self):
+        for s1 in self.transiton_probs:
+            for a in self.transiton_probs[s1]:
+                for s2 in self.transiton_probs[s1][a]:
+                    self.TNN.Update(np.asarray(s1),np.asarray(s2),self.transiton_probs[s1][a][s2])
+
+    # TODO - take the current transition_matrix and compute transition_probs (&save it)
+    def saveTprobs(self, fileName):
+
+    def loadTprobs(self, fileName):
+        theFile = open(fileName, "r")
+        self.transiton_probs = pickle.load(theFile)
         theFile.close()
 
 if __name__=="__main__":        
