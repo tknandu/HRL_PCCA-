@@ -12,9 +12,12 @@ def trainAgent():
     exp = 1.0 # epsilon?
 
     totalSteps = 0
-    """
+
+    '''
+    #Random player
     raw_results = []
     RLGlue.RL_agent_message("freeze_learning")
+    RLGlue.RL_agent_message("freeze_transition_learning")
     for i in range(episodesToRun):
         RLGlue.RL_agent_message("set_exploring " + str(exp)) 
         RLGlue.RL_episode(2000)
@@ -30,8 +33,14 @@ def trainAgent():
     results1 = []
     for i in range(100,episodesToRun):
         results1.append(sum(raw_results[i-100:i])/100.0)
-    """
+    '''
+
+    #Q-NN agent
+    # First, we unfreeze learning to train QNN. Once trained, we also have state representations (hidden layer output of trained network).
+    # Next, we freeze layer and only learn the transition probabilities.
+    
     RLGlue.RL_agent_message("unfreeze_learning")
+    RLGlue.RL_agent_message("freeze_transition_learning")
     raw_results = []
     for i in range(episodesToRun):
         if (i % 100 == 0):
@@ -52,16 +61,43 @@ def trainAgent():
     for i in range(100,episodesToRun):
         results2.append(sum(raw_results[i-100:i])/100.0)
 
-#    plt.plot(results1, color='red', label='Random')
+    #plt.plot(results1, color='red', label='Random')
     plt.plot(results2, color='blue', label='Neural Q-Network')
     plt.xlabel('Episode Number')
     plt.ylabel('Mean Total Reward over 100 Episodes')
     plt.legend()
     plt.show()
 
+    RLGlue.RL_agent_message("save_policy qfun.dat")
+
+    # Transition Probs learning
+    RLGlue.RL_agent_message("freeze_learning")
+    RLGlue.RL_agent_message("unfreeze_transition_learning")
+    for i in range(episodesToRun):
+        if (i % 100 == 0):
+            if (exp > 0.1):
+                exp -= 0.05
+            RLGlue.RL_agent_message("set_exploring " + str(exp))
+        RLGlue.RL_episode(2000)
+        thisSteps = RLGlue.RL_num_steps()
+        print "Total steps in episode %d is %d" %(i, thisSteps)
+        thisReturn = RLGlue.RL_return()
+        if (thisReturn > 50.0):
+            thisReturn = 10.0
+        print "Total return in episode %d is %f" %(i, thisReturn)
+        raw_results.append(thisReturn)
+        totalSteps += thisSteps
+    print "Total steps : %d\n" % (totalSteps)
+
+    RLGlue.RL_agent_message("savetransmatrix transitionProbs.dat")
+
+    # Train TNN
+    RLGlue.RL_agent_message("train_TNN")
+
 def testAgent():
     episodesToRun = 50
     totalSteps = 0
+
     RLGlue.RL_agent_message("freeze learning")
     for i in range(episodesToRun):
         RLGlue.RL_episode(2000)
@@ -71,7 +107,8 @@ def testAgent():
         print "Total return in episode %d is %f" %(i, thisReturn)
         totalSteps += thisSteps
     print "Total steps : %d\n" % (totalSteps)
-    RLGlue.RL_agent_message("unfreeze learning")
+    RLGlue.RL_agent_message("unfreeze learning");
+
 
 def main():
     whichTrainingMDP = 0
@@ -86,18 +123,23 @@ def main():
     instance - 0..9, determines which Mario you run.    
     '''
 
-    loadMario(True, True, 3, 2, 1, whichTrainingMDP)
+    loadMario(True, False, 3, 0, 1, whichTrainingMDP)
 
     RLGlue.RL_init()
+
+    #RLGlue.RL_agent_message("loadtransmatrix")
 
     #RLGlue.RL_agent_message("load_policy agents/exampleAgent.dat")
 
     trainAgent()
 
     #RLGlue.RL_agent_message("save_policy agents/exampleAgent.dat")
-    RLGlue.RL_agent_message("savetransmatrix")
+
+    #RLGlue.RL_agent_message("savetransmatrix")
 
     #testAgent()
+
+    #RLGlue.RL_agent_message("save_policy qfun.dat")
 
     RLGlue.RL_cleanup()
 

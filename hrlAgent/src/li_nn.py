@@ -159,9 +159,42 @@ class NeuralNet:
         output = layerX[length-1]
         # print layerX
         
+        #print 'Hidden layer 2: ',layerX[length-2]
+
         return output
                 
+    # Added now
+    def getHiddenLayerRepresentation(self, X):
+        """
+        Find last but one hidden layer representation of input X
+        """
+        theta = self.theta
+        layers = self.layers
+        length = len(layers)
         
+        # decode vector theta
+        theta_mat = np.empty((length-1),dtype=object)
+
+        flag = 0        
+        for i in range(0,length-1):
+            size = layers[i+1] * (layers[i]+1)
+            theta_mat[i]=theta[flag:(flag+size)].reshape(layers[i+1],-1)
+            flag = flag+size
+                
+        layerX = np.empty((length),dtype=object)
+        
+        # add bias node to layer0, now 1* d+1
+        # need to use sigmoid func
+        layerX[0] = X
+        layerX[0] = np.append(1,layerX[0]).reshape(-1,1)
+            
+        for j in range(1,length):
+            layerX[j] = self.sigmoid(np.dot(theta_mat[j-1],layerX[j-1]))
+            # add bias node
+            if j< (length -1) :
+                layerX[j] = np.append(1,layerX[j]).reshape(-1,1)
+        
+        return layerX[length-2]        
     
     def sigmoid(self, z):
         # return value of sigmoid function
