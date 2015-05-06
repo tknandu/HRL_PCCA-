@@ -1,7 +1,9 @@
 import pickle
 import numpy as np
 
+print 1
 f = open('transmatrix.dat','r')
+print 2
 unpick = pickle.Unpickler(f)
 tm = unpick.load() #The transition matrix
 n_states_seen = len(tm.keys())
@@ -10,6 +12,7 @@ print n_states_seen
 np_tm = np.zeros((n_states_seen,n_states_seen),dtype=np.float) #The transition matrix as a numpy array 
 #print np_tm
 print np_tm.shape
+assert False
 
 state_i = 0
 state_mapping = {}

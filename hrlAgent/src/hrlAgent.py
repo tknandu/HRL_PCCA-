@@ -73,7 +73,7 @@ class MarioAgent(Agent):
         #self.clusterer = PCCA()
 
         self.transition_matrix = {} # this is actually only counts
-        self.transiton_probs = {} # actual probabilities
+        self.transition_probs = {} # actual probabilities
         self.last_enc_state = None
         self.last_enc_action = None
 
@@ -93,7 +93,7 @@ class MarioAgent(Agent):
         self.total_steps += 1
         act = self.getAction(observation)
 
-        if (not self.transiton_learning_frozen):
+        if (not self.transition_learning_frozen):
             enc_state = tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(observation)))
             enc_action = self.actionEncoder(act)        
             if enc_state not in self.transition_matrix:
@@ -159,11 +159,11 @@ class MarioAgent(Agent):
 
         # Added now
         if inMessage.startswith("freeze_transition_learning"):
-            self.transiton_learning_frozen=True
-            return "message understood, transiton learning frozen"    
+            self.transition_learning_frozen=True
+            return "message understood, transition learning frozen"    
         if inMessage.startswith("unfreeze_transition_learning"):
-            self.transiton_learning_frozen=False
-            return "message understood, transiton learning unfrozen"        
+            self.transition_learning_frozen=False
+            return "message understood, transition learning unfrozen"        
         return None
         if inMessage.startswith("train_TNN"):
             print 'Training TNN'
@@ -376,17 +376,29 @@ class MarioAgent(Agent):
 
     # Added now
     def train_TNN(self):
-        for s1 in self.transiton_probs:
-            for a in self.transiton_probs[s1]:
-                for s2 in self.transiton_probs[s1][a]:
-                    self.TNN.Update(np.asarray(s1),np.asarray(s2),self.transiton_probs[s1][a][s2])
+        for s1 in self.transition_probs:
+            for a in self.transition_probs[s1]:
+                for s2 in self.transition_probs[s1][a]:
+                    self.TNN.Update(np.asarray(s1),np.asarray(s2),self.transition_probs[s1][a][s2])
 
     # TODO - take the current transition_matrix and compute transition_probs (&save it)
     def saveTprobs(self, fileName):
+        transition_probs = {}
+        for s1 in self.transition_matrix.keys():
+            transition_probs[s1] = {}
+            for a in self.transition_matrix[s1].keys():
+                transition_probs[s1][a] = {}
+                Z = 0 #Normalisation constant
+                for s2 in self.transition_matrix[s1][a].keys():
+                    Z += self.transition_matrix[s1][a][s2]
+                for s2 in self.transition_matrix[s1][a].keys():
+                    transition_probs[s1][a][s2] = float(self.transition_matrix[s1][a][s2])/float(Z)
+        theFile = open(fileName,'w')
+        pickle.dump(transition_probs,theFile)
 
     def loadTprobs(self, fileName):
         theFile = open(fileName, "r")
-        self.transiton_probs = pickle.load(theFile)
+        self.transition_probs = pickle.load(theFile)
         theFile.close()
 
 if __name__=="__main__":        

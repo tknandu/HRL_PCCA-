@@ -123,7 +123,7 @@ def main():
     instance - 0..9, determines which Mario you run.    
     '''
 
-    loadMario(True, False, 3, 0, 1, whichTrainingMDP)
+    loadMario(True, True, 3, 0, 1, whichTrainingMDP)
 
     RLGlue.RL_init()
 

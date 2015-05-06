@@ -79,3 +79,6 @@ class Deep_QNN():
             index = random.randint(0, len(self.experiences)-1)
             exp = self.experiences[index]
             self.Update(exp.s1, exp.a1, exp.r, exp.s2, exp.a2)
+
+    def getHiddenLayerRepresentation(self,state):
+        return self.NN.getHiddenLayerRepresentation(state)

@@ -214,4 +214,3 @@ class NeuralNet:
         '''
         a = self.propagate(x)
         self.update(x, y, a)
-        
