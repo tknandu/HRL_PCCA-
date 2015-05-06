@@ -22,34 +22,27 @@ from rlglue.types import Reward_observation_terminal
 #   -  Start this environment like:
 #   $> python sample_mines_environment.py
 
-class mines_environment(Environment):
+class threeroom_environment(Environment):
 	
-	wind = True
 
 	FREE = 0
-	BAD = 1
-	WORSE = 2
-	WORST = 3
-	GOAL = 4
+    START = 1
+    WALL = 2
+    GOAL = 3
+
 	randGenerator = random.Random()
-	fixedStartState=False;
-	startRow = [5,6,10,11]
-	startCol = 0
 
 	def env_init(self):
 		env_file = open(sys.argv[1],"r")
-		self.map = []
-	    	for l in env_file.readlines():
-			self.map += [[int(i) for i in l.strip().split(',')]]
+		self.worldmap = []
+        for l in env_file.readlines():
+			self.worldmap += [[int(i) for i in l.strip().split(',')]]
 
 		#The Python task spec parser is not yet able to build task specs programmatically
 		return "VERSION RL-Glue-3.0 PROBLEMTYPE episodic DISCOUNTFACTOR 0.9 OBSERVATIONS INTS (0 143) ACTIONS INTS (0 3) REWARDS (-3.0 10.0) EXTRA SampleMinesEnvironment(C/C++) by Brian Tanner."
 	
 	def env_start(self):
-		if self.fixedStartState == False:
-			stateValid=self.setAgentState(random.choice(self.startRow),self.startCol)
-		else:
-			stateValid=self.setAgentState(self.startRow,self.startCol)
+        self.setStartState()
 		returnObs=Observation()
 		returnObs.intArray=[self.calculateFlatState()]
 		return returnObs
@@ -79,130 +72,98 @@ class mines_environment(Environment):
 		#	Message Description
 	 	# 'set-random-start-state'
 	 	#Action: Set flag to do random starting states (the default)
-		if inMessage.startswith("set-random-start-state"):
-			self.fixedStartState=False;
-			return "Message understood.  Using random start state.";
+#		if inMessage.startswith("set-random-start-state"):
+#			self.fixedStartState=False;
+#			return "Message understood.  Using random start state.";
 
 		#	Message Description
 		# 'set-start-state X Y'
 		# Action: Set flag to do fixed starting states (row=X, col=Y)
+        """
 		if inMessage.startswith("set-start-state"):
 			splitString=inMessage.split(" ");
 			self.startRow=int(splitString[1]);
 			self.startCol=int(splitString[2]);
 			self.fixedStartState=True;
 			return "Message understood.  Using fixed start state.";
+        """
 
 		#	Message Description
 		#	'print-state'
 		#	Action: Print the map and the current agent location
 		if inMessage.startswith("print-state"):
-			self.printState();
-			return "Message understood.  Printed the state.";
+			self.printState()
+			return "Message understood.  Printed the state."
 
-		return "SamplesMinesEnvironment(Python) does not respond to that message.";
+		return "SamplesMinesEnvironment(Python) does not respond to that message."
+
+    def setStartState(self):
+        startrow = -1
+        startcol = -1
+        for (row_i,row) in enumerate(self.worldmap):
+            try:
+                startcol = row.index(self.START)
+                startrow = row_i
+                break
+            except ValueError:
+                continue
+        assert startrow != -1 and startcol != -1
+        self.setAgentState(startrow,startrow)
 
 	def setAgentState(self,row, col):
 		self.agentRow=row
 		self.agentCol=col
 
-		return self.checkValid(row,col) and not self.checkTerminal(row,col)
-
-	def setRandomState(self):
-		numRows=len(self.map)
-		numCols=len(self.map[0])
-		startRow=self.randGenerator.randint(0,numRows-1)
-		startCol=self.randGenerator.randint(0,numCols-1)
-
-		while not self.setAgentState(startRow,startCol):
-			startRow=self.randGenerator.randint(0,numRows-1)
-			startCol=self.randGenerator.randint(0,numCols-1)
+        assert self.checkValid(row,col)
 
 	def checkValid(self,row, col):
-		valid=False
-		numRows=len(self.map)
-		numCols=len(self.map[0])
+		numRows=len(self.worldmap)
+		numCols=len(self.worldmap[0])
 
-		if(row < numRows and row >= 0 and col < numCols and col >= 0):
-			valid=True
-		return valid
+        return self.worldmap[row][col] != self.WALL:
 
 	def checkTerminal(self,row,col):
-		if (self.map[row][col] == self.GOAL):
-			return True
-		return False
+        return self.worldmap[row][col] == self.GOAL
 
 	def checkCurrentTerminal(self):
 		return self.checkTerminal(self.agentRow,self.agentCol)
 
 	def calculateFlatState(self):
-		numRows=len(self.map)
+		numRows=len(self.worldmap)
 		return self.agentCol * numRows + self.agentRow
-
-
 
 	def updatePosition(self, theAction):
 		# When the move would result in hitting an obstacles, the agent simply doesn't move 
 
-		newRow = self.agentRow;
-		newCol = self.agentCol;
+		newRow = self.agentRow
+		newCol = self.agentCol
 
-		stoch = random.random()
-		if(stoch >= 0.1):
-			if (theAction == 0):#move left
-				newCol = self.agentCol - 1;
+        if (theAction == 0):#move left
+            newCol = self.agentCol - 1
 
-			if (theAction == 1): #move right
-				newCol = self.agentCol + 1;
+        if (theAction == 1): #move right
+            newCol = self.agentCol + 1
 
-			if (theAction == 2):#move up
-				newRow = self.agentRow - 1;
+        if (theAction == 2):#move up
+            newRow = self.agentRow - 1
 
-			if (theAction == 3):#move down
-				newRow = self.agentRow + 1;
-		else:
-			possibleActions=  [i for i in [0,1,2,3] if i!=theAction]
-			newAction = random.choice(possibleActions)
-			if (newAction == 0):#move left
-				newCol = self.agentCol - 1;
+        if (theAction == 3):#move down
+            newRow = self.agentRow + 1
 
-			if (newAction == 1): #move right
-				newCol = self.agentCol + 1;
-
-			if (newAction == 2):#move up
-				newRow = self.agentRow - 1;
-
-			if (newAction == 3):#move down
-				newRow = self.agentRow + 1;
-			
-
-		#Check if new position is out of bounds or inside an obstacle 
-		if(self.checkValid(newRow,newCol)):
-			self.agentRow = newRow;
-			self.agentCol = newCol;
-
-		stoch = random.random()
-		if(stoch >= 0.5):
-			#Blow right
-			newCol = self.agentCol + 1
-			if(self.checkValid(self.agentRow,newCol)):
-				self.agentCol = newCol;
-
+        #Check if new position is out of bounds or inside an obstacle 
+		if self.checkValid(newRow,newCol):
+			self.agentRow = newRow
+			self.agentCol = newCol
 
 	def calculateReward(self):
-		if(self.map[self.agentRow][self.agentCol] == self.GOAL):
-			return 10.0;
-		if(self.map[self.agentRow][self.agentCol] == self.BAD):
-			return -1.0;
-		if(self.map[self.agentRow][self.agentCol] == self.WORSE):
-			return -2.0
-		if(self.map[self.agentRow][self.agentCol] == self.WORST):
-			return -3.0
-		return 0.0;
+		if(self.worldmap[self.agentRow][self.agentCol] == self.GOAL):
+			return 1.0
+		return 0.0
 		
 	def printState(self):
-		numRows=len(self.map)
-		numCols=len(self.map[0])
+		numRows=len(self.worldmap)
+		numCols=len(self.worldmap[0])
+
 		print "Agent is at: "+str(self.agentRow)+","+str(self.agentCol)
 		print "Columns:0-10                10-17"
 		print "Col    ",
@@ -218,16 +179,14 @@ class mines_environment(Environment):
 				else:
 					if self.map[row][col] == self.GOAL:
 						print "G",
-					if self.map[row][col] == self.BAD:
+					if self.map[row][col] == self.WALL:
 						print "X",
-					if self.map[row][col] == self.WORSE:
-						print "Y",
-					if self.map[row][col] == self.WORST:
-						print "Z",
+					if self.map[row][col] == self.START:
+						print "S",
 					if self.map[row][col] == self.FREE:
 						print " ",
 		print
 		
 
 if __name__=="__main__":
-	EnvironmentLoader.loadEnvironment(mines_environment())
+	EnvironmentLoader.loadEnvironment(threeroom_environment())

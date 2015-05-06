@@ -67,8 +67,9 @@ for run in xrange(NO_RUNS):
 		returnVsEpisode[episode] += (currentReturn/timeStep)
 		timeVsEpisode[episode] += currentSteps
 
-	RLGlue.RL_agent_message("save_policy /Users/krishnamurthythangavel/Documents/8-Sem/RL/Assignment2/Assignment_2/question1/results/"+goal+"/value_function.dat");
-	theFile = open("/Users/krishnamurthythangavel/Documents/8-Sem/RL/Assignment2/Assignment_2/question1/results/"+goal+"/value_function.dat", "r")
+    """
+	RLGlue.RL_agent_message("save_policy value_function.dat");
+	theFile = open("value_function.dat", "r")
 	value_function=pickle.load(theFile)
 	theFile.close()
 
@@ -79,6 +80,7 @@ for run in xrange(NO_RUNS):
 	theFile = open("/Users/krishnamurthythangavel/Documents/8-Sem/RL/Assignment2/Assignment_2/question1/results/"+goal+"/average_time_"+str(run)+".dat", "w")
 	pickle.dump(timeVsEpisode, theFile)
 	theFile.close()
+    """
 
 	for s in xrange(144):
 		a = value_function[s].index(max(value_function[s]))
@@ -94,6 +96,7 @@ for episode in xrange(NO_EPISODES):
 	returnVsEpisode[episode] = float(returnVsEpisode[episode])/NO_RUNS
 	print "\tEpisode "+str(episode+1)+"\t "+str(timeVsEpisode[episode])+ " steps \t" + str(returnVsEpisode[episode]) + " average return\t "
 
+"""
 theFile = open("/Users/krishnamurthythangavel/Documents/8-Sem/RL/Assignment2/Assignment_2/question1/results/"+goal+"/final_average_reward.dat", "w")
 pickle.dump(returnVsEpisode, theFile)
 theFile.close()
@@ -140,8 +143,8 @@ plt.plot(episodes,returnVsEpisode)
 f2.show()
 
 raw_input()
+"""
 
-'''
 whichEpisode=0
 def runEpisode(stepLimit):
 	# stepLimit of 0 implies no limit
@@ -158,4 +161,3 @@ def runEpisode(stepLimit):
 RLGlue.RL_init()
 for i in xrange(NO_EPISODES):
 	runEpisode(0)
-'''
