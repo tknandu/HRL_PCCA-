@@ -5,7 +5,7 @@ f = open('tmatrixperfect.dat','r')
 a = pickle.Unpickler(f)
 tm = a.load()
 
-pccaobj = PCCA()
+pccaobj = PCCA(True)
 chi_mat = pccaobj.pcca(tm)
 
 print tm.shape
