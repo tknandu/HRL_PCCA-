@@ -164,14 +164,15 @@ class q_agent(Agent):
         print self.option_S_j
         print 'Shape of second term: ', (self.chi_mat.T[self.option_S_j]).T.shape
 
-        print np.dot(self.p_mat[s][0],self.chi_mat.T[self.option_S_j].T)
+        print 'Debug:'
+        print self.chi_mat[0,0]
 
         # 2. Choose action based on membership ascent
         thisIntAction=1
         maxVal = 0
         for a in xrange(4): 
-            print self.normalizationC*(np.sum(np.dot(self.p_mat[s][a],self.chi_mat.T[self.option_S_j].T)) - self.chi_mat.T[self.option_S_j])
-            action_pref = max(self.normalizationC*(np.sum(np.dot(self.p_mat[s][a],self.chi_mat.T[self.option_S_j].T)) - self.chi_mat.T[self.option_S_j]),0)
+            print max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+            action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
             if action_pref > maxVal:
                 thisIntAction = a
                 maxVal = action_pref
