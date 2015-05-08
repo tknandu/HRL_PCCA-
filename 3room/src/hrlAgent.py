@@ -33,6 +33,7 @@ from random import Random, shuffle
 from operator import itemgetter
 from sys import argv
 import numpy as np
+import math
 
 # This is a very simple q agent for discrete-action, discrete-state
 # environments.  It uses epsilon-greedy exploration.
@@ -159,6 +160,7 @@ class q_agent(Agent):
         self.option_S_i = self.absStateMembership[s] # initiation step
         self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0]# actually, we will have to choose S_j based on SMDP
 
+
         print 'Shape of first term: ',self.p_mat[s][0].shape
         print self.option_S_j
         print 'Shape of second term: ', (self.chi_mat.T[self.option_S_j]).T.shape
@@ -192,16 +194,30 @@ class q_agent(Agent):
         lastState=self.lastObservation.intArray[0]
         lastAction=self.lastAction.intArray[0]
 
-        # Assuming option is currently running, choose action based on membership ascent
-        s = self.valid_states.index(newState) # row index
-        newIntAction=1
-        maxVal = 0
-        for a in xrange(4): 
-            print max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
-            action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
-            if action_pref > maxVal:
-                newIntAction = a
-                maxVal = action_pref
+        newIntAction = 1 # initialization
+
+        # Check if an option is in action
+        if self.optionCurrentlyOn:
+            s = self.valid_states.index(newState) # row index
+
+            # Decide whether to terminate option
+            beta = min(math.log(self.chi_mat[s,self.option_S_i])/math.log(self.chi_mat[s,self.option_S_j]),1)
+            if self.randGenerator.random() < beta:
+                self.optionCurrentlyOn = False
+                # Choose next option/action based on SMDP 
+                print 'Terminated option'
+                assert False
+
+            else:
+                # If not terminated, choose action based on membership ascent
+                newIntAction=1
+                maxVal = 0
+                for a in xrange(4): 
+                    print max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                    action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                    if action_pref > maxVal:
+                        newIntAction = a
+                        maxVal = action_pref
 
         print 'Action chosen: ',newIntAction
 
