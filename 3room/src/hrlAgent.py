@@ -157,8 +157,7 @@ class q_agent(Agent):
         # 1. Find the abstract state you belong to & going to
         s = self.valid_states.index(theState) # row index
         self.option_S_i = self.absStateMembership[s] # initiation step
-
-        self.option_S_j = 1 #((-(self.connect_mat[self.option_S_i])).argsort())[1] # actually, we will have to choose S_j based on SMDP
+        self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0]# actually, we will have to choose S_j based on SMDP
 
         print 'Shape of first term: ',self.p_mat[s][0].shape
         print self.option_S_j
