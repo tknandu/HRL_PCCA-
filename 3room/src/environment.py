@@ -42,6 +42,16 @@ class threeroom_environment(Environment):
         for l in env_file.readlines():
             self.worldmap += [[int(i) for i in l.strip().split(',')]]
 
+
+        numRows = len(self.worldmap)
+        numCols = len(self.worldmap[0])
+        self.validstates = []
+        for row in range(numRows):
+            for col in range(numCols):
+                if self.checkValid(row,col):
+                    self.validstates.append(self.calculateFlatState(row,col))
+
+
         #The Python task spec parser is not yet able to build task specs programmatically
         return "VERSION RL-Glue-3.0 PROBLEMTYPE episodic DISCOUNTFACTOR 0.9 OBSERVATIONS INTS (0 143) ACTIONS INTS (0 3) REWARDS (-3.0 10.0) EXTRA SampleMinesEnvironment(C/C++) by Brian Tanner."
     
@@ -101,16 +111,8 @@ class threeroom_environment(Environment):
 
         if inMessage.startswith("dumptmatrix"):
 
-            numRows = len(self.worldmap)
-            numCols = len(self.worldmap[0])
-            states = []
-            for row in range(numRows):
-                for col in range(numCols):
-                    if self.checkValid(row,col):
-                        states.append(self.calculateFlatState(row,col))
-
-            tmatrix = np.zeros((numRows*numCols, numRows*numCols),dtype=np.float)
-            for (state_i,state) in enumerate(states):
+            tmatrix = np.zeros((len(self.validstates),len(self.validstates)),dtype=np.float)
+            for (state_i,state) in enumerate(self.validstates):
                 valid_successors = []
                 (row,col) = self.calculateCoordsFromFlatState(state)
                 if self.checkValid(row,col+1):
@@ -122,7 +124,7 @@ class threeroom_environment(Environment):
                 if self.checkValid(row-1,col):
                     valid_successors.append(self.calculateFlatState(row-1,col))
                 for vs in valid_successors:
-                    tmatrix[state][vs] = float(1)/len(valid_successors)
+                    tmatrix[state_i][self.validstates.index(vs)] = float(1)/len(valid_successors)
  
             splitstring = inMessage.split()
             outfile = open(splitstring[1],'w')

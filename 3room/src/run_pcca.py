@@ -8,5 +8,8 @@ tm = a.load()
 pccaobj = PCCA()
 chi_mat = pccaobj.pcca(tm)
 
+print tm.shape
+print chi_mat.shape
+
 outfile = open('chi_mat.dat','w')
 pickle.dump(chi_mat,outfile)
