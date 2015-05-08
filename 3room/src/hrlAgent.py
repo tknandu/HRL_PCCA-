@@ -171,7 +171,7 @@ class q_agent(Agent):
         maxVal = 0
         for a in xrange(4): 
             print self.normalizationC*(np.sum(np.dot(self.p_mat[s][a],self.chi_mat.T[self.option_S_j].T)) - self.chi_mat.T[self.option_S_j])
-            action_pref = self.normalizationC*(np.sum(np.dot(self.p_mat[s][a],self.chi_mat.T[self.option_S_j].T)) - self.chi_mat.T[self.option_S_j])
+            action_pref = max(self.normalizationC*(np.sum(np.dot(self.p_mat[s][a],self.chi_mat.T[self.option_S_j].T)) - self.chi_mat.T[self.option_S_j]),0)
             if action_pref > maxVal:
                 thisIntAction = a
                 maxVal = action_pref
