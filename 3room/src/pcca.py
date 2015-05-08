@@ -99,9 +99,8 @@ class PCCA():
 
         return (c_f, indic, chi, rot_mat)
 
-    '''
-    #===============================================================================
-    def fill_matrix(rot_crop_matrix, eigvectors):
+
+    def fill_matrix(self, rot_crop_matrix, eigvectors):
 
         (x, y) = rot_crop_matrix.shape
 
@@ -124,7 +123,6 @@ class PCCA():
 
         return rot_matrix
 
-    #===============================================================================
     def opt_soft(self, eigvectors, rot_matrix, n_clusters):
 
         # only consider first n_clusters eigenvectors
@@ -143,7 +141,7 @@ class PCCA():
             # reshape into matrix
             rot_crop_matrix = np.reshape(rot_crop_vec, (x, y))
             # fill matrix
-            rot_matrix = fill_matrix(rot_crop_matrix, eigvectors)
+            rot_matrix = self.fill_matrix(rot_crop_matrix, eigvectors)
 
             result = 0
             for i in range(0, n_clusters):
@@ -156,14 +154,12 @@ class PCCA():
         rot_crop_vec_opt = fmin( susanna_func, rot_crop_vec, args=(eigvectors,) )
         
         rot_crop_matrix = np.reshape(rot_crop_vec_opt, (x, y))
-        rot_matrix = fill_matrix(rot_crop_matrix, eigvectors)
+        rot_matrix = self.fill_matrix(rot_crop_matrix, eigvectors)
 
         return(rot_matrix)
 
 
-    #===============================================================================
 
-    '''
     def pcca(self, s_matrix):
     # input s_matrix corresponds to the transition matrix
     
@@ -196,35 +192,13 @@ class PCCA():
 
 
         # TODO: Is this optimization needed? What to do about the weights then?
-        """
         if self.optimizeChi:
             print "\n### Optimizing chi matrix ..."
-                
-            outliers = 5
-            mean_weight = np.mean(corr_node_weights)
-            threshold = mean_weight/100*outliers
-            print "Light-weight node threshold (%d%% of mean corrected node weight): %.4f."%(outliers, threshold)
-
-            # accumulate nodes for optimization
-            edges = np.where(np.max(chi_matrix, axis=1) > 0.9999)[0] # edges of simplex
-            heavies = np.where( corr_node_weights > threshold)[0] # heavy-weight nodes
-            filtered_eigvectors = eigvectors[ np.union1d(edges, heavies) ]
 
             # perform the actual optimization
-            rot_matrix = self.opt_soft(filtered_eigvectors, rot_matrix, n_clusters)
+            rot_matrix = self.opt_soft(eigvectors, rot_matrix, n_clusters)
 
             chi_matrix = np.dot(eigvectors[:,:n_clusters], rot_matrix)
-                
-            # deal with light-weight nodes: shift and scale
-            for i in np.where(corr_node_weights <= threshold)[0]:
-                if(i in edges):
-                    print "Column %d belongs to (potentially dangerous) light-weight node, but its node is a simplex edge."%(i+1)
-                    continue
-                print "Column %d is shifted and scaled."%(i+1)
-                col_min = np.min( chi_matrix[i,:] )
-                chi_matrix[i,:] -= col_min
-                chi_matrix[i,:] /= 1-(n_clusters*col_min)
-        """
 
         qc_matrix = np.dot( np.dot( np.linalg.inv(rot_matrix), np.diag(eigvalues[range(n_clusters)]) ), rot_matrix ) - np.eye(n_clusters)
         cluster_weights = rot_matrix[0]
