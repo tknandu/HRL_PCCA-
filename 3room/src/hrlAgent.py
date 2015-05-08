@@ -89,8 +89,6 @@ class q_agent(Agent):
             assert not TaskSpec.isSpecial(TaskSpec.getIntActions()[0][0]), " expecting min action to be a number not a special value"
             assert not TaskSpec.isSpecial(TaskSpec.getIntActions()[0][1]), " expecting max action to be a number not a special value"
             self.numActions=TaskSpec.getIntActions()[0][1]+1;
-            
-            self.value_function=[self.numActions*[0.0] for i in range(self.numStates)]
 
             self.episode = 0
 
@@ -101,23 +99,26 @@ class q_agent(Agent):
         unpickler = pickle.Unpickler(chimatfile)
         self.chi_mat = np.mat(unpickler.load())
 
+        # 0,1,2,3 - primitive actions, 4... - options
+        self.value_function=[(self.chi_mat.shape[1]+self.numActions)*[0.0] for i in range(self.numStates)]
+
         self.absStateMembership = []
         self.statesInAbsState = [[] for i in xrange(self.chi_mat.shape[1])]
         for (row_i,row) in enumerate(self.chi_mat):
             self.absStateMembership.append(row.argmax())
             self.statesInAbsState[row.argmax()].append(row_i)
 
-        print 'Abstract state to which state belongs:'
-        print self.absStateMembership
-        print 'States in each abstract state:'
-        print self.statesInAbsState
+        #print 'Abstract state to which state belongs:'
+        #print self.absStateMembership
+        #print 'States in each abstract state:'
+        #print self.statesInAbsState
 
         #This is just to get a mapping from the indices of chi_mat to the values returned by the environment
         validstatefile = open('valid_states.dat','r')
         unpickler = pickle.Unpickler(validstatefile)
         self.valid_states = unpickler.load()
-        print 'Mapping from row indices to flat state rep:'
-        print self.valid_states
+        #print 'Mapping from row indices to flat state rep:'
+        #print self.valid_states
 
         self.lastAction=Action()
         self.lastObservation=Observation()
@@ -130,20 +131,22 @@ class q_agent(Agent):
         self.p_mat = pickle.load(pmatrixfile)
 
         self.connect_mat = self.chi_mat.T*self.t_mat*self.chi_mat
-        print 'Connectivity matrix:'
-        print self.connect_mat
+        #print 'Connectivity matrix:'
+        #print self.connect_mat
 
 
     def egreedy(self, state):
         maxIndex=0
         a=1
         if not self.exploringFrozen and self.randGenerator.random()<self.q_epsilon:
-            return self.randGenerator.randint(0,self.numActions-1)
+            return self.randGenerator.randint(0,self.chi_mat.shape[1]+self.numActions-1)
 
-#       return self.value_function[state].index(max(self.value_function[state]))
         temp = [(i,v) for i,v in enumerate(self.value_function[state])]
         shuffle(temp)
         a = max(temp,key=itemgetter(1))[0]
+
+
+
         return a
 
     def agent_start(self,observation):
@@ -161,18 +164,18 @@ class q_agent(Agent):
 
         self.option_S_j = 1 # np.array((-self.connect_mat[self.option_S_i]).argsort())[1] # actually, we will have to choose S_j based on SMDP
 
-        print 'Shape of first term: ',self.p_mat[s][0].shape
-        print self.option_S_j
-        print 'Shape of second term: ', (self.chi_mat.T[self.option_S_j]).T.shape
+        #print 'Shape of first term: ',self.p_mat[s][0].shape
+        #print self.option_S_j
+        #print 'Shape of second term: ', (self.chi_mat.T[self.option_S_j]).T.shape
 
-        print 'Debug:'
-        print self.chi_mat[0,0]
+        #print 'Debug:'
+        #print self.chi_mat[0,0]
 
         # 2. Choose action based on membership ascent
         thisIntAction=1
         maxVal = 0
         for a in xrange(4): 
-            print max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+            print 'Action: ',a,' ',max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
             action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
             if action_pref > maxVal:
                 thisIntAction = a
@@ -213,7 +216,7 @@ class q_agent(Agent):
                 newIntAction=1
                 maxVal = 0
                 for a in xrange(4): 
-                    print max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                    print 'Action: ',a,' ',max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
                     action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
                     if action_pref > maxVal:
                         newIntAction = a
