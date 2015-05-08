@@ -48,9 +48,7 @@ def runEpisode(stepLimit):
 RLGlue.RL_init()
 #RLGlue.RL_env_message("dumptmatrix tmatrixperfect.dat")
 RLGlue.RL_env_message("printabstractstates")
-
 runEpisode(0)
-
 assert False
 
 returnVsEpisode = np.zeros(NO_EPISODES)
