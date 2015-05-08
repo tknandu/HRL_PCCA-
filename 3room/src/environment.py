@@ -43,6 +43,7 @@ class threeroom_environment(Environment):
             self.worldmap += [[int(i) for i in l.strip().split(',')]]
 
 
+        #We have 86 states, while we have 100 possible values of flat state (0 to 99)
         numRows = len(self.worldmap)
         numCols = len(self.worldmap[0])
         self.validstates = []
@@ -109,6 +110,7 @@ class threeroom_environment(Environment):
             self.printState()
             return "Message understood.  Printed the state."
 
+        
         if inMessage.startswith("dumptmatrix"):
 
             tmatrix = np.zeros((len(self.validstates),len(self.validstates)),dtype=np.float)
