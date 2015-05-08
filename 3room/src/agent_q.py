@@ -49,7 +49,7 @@ from sys import argv
 #   -  Start this agent like:
 #   $> python sample_q_agent.py
 
-script, dynamicEpsilon = argv
+#script, dynamicEpsilon = argv
 
 class q_agent(Agent):
 
