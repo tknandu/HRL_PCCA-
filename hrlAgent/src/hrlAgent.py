@@ -11,6 +11,7 @@ from qnn import QNN
 from pcca import PCCA
 from deep_qnn import Deep_QNN
 from tnn import TNN
+import math
 
 class Monster:
     def __init__(self):
@@ -72,10 +73,24 @@ class MarioAgent(Agent):
 
         #self.clusterer = PCCA()
 
-        self.transition_matrix = {} # this is actually only counts
-        self.transition_probs = {} # actual probabilities
+        self.discretization_done = False
+        
+        self.n_bins = 10
+        self.n_disc_states = (self.n_bins + 3)*(self.n_bins + 3)
+        self.phi_mat = np.zeros((self.n_disc_states,12,self.n_disc_states),dtype=int)
+        self.U_mat = np.zeros((self.n_disc_states,12,self.n_disc_states),dtype=float)
+
+        self.regularization_constant = 0.4 #For rewards incorporated into transition structure
+
+        #The (probably) incorrect U_mat that Peeyush writes in his algo
+        self.Peey_U_mat = np.zeros((self.n_disc_states,12,self.n_disc_states),dtype=float)
+
+#        self.transition_matrix = {} # this is actually only counts
+#        self.transition_probs = {} # actual probabilities
         self.last_enc_state = None
         self.last_enc_action = None
+
+        self.seen_expanded_states = {} #A dictionary of all the non-approximated (original Mario input) states that were seen.
 
     def agent_start(self,observation):
         self.step_number = 0
@@ -83,8 +98,14 @@ class MarioAgent(Agent):
 
         # At the start of each episode, run PCCA
         #   chi_matrix = self.clusterer()
+        self.seen_expanded_states[tuple(self.stateEncoder(observation))] = True
 
-        return self.getAction(observation)
+        act = self.getAction(observation)
+        if self.discretization_done:
+            enc_state = tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(observation)))
+            self.last_disc_state = self.getDiscretizedState(enc_state)
+            self.last_enc_action = self.actionEncoder(act)
+        return act
     
     def agent_step(self,reward, observation):
         #self.printFullState(observation)
@@ -95,20 +116,28 @@ class MarioAgent(Agent):
 
         if (not self.transition_learning_frozen):
             enc_state = tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(observation)))
+            disc_state = self.getDiscretizedState(enc_state)
             enc_action = self.actionEncoder(act)        
-            if enc_state not in self.transition_matrix:
-                self.transition_matrix[enc_state] = {}
-            if self.last_enc_action:
+            self.phi_mat[self.last_disc_state][self.last_enc_action][disc_state] += 1
+            self.U_mat[self.last_disc_state][self.last_enc_action][disc_state] += math.exp(-self.regularization_constant*abs(reward))
+            self.Peey_U_mat[self.last_disc_state][self.last_enc_action][disc_state] += self.phi_mat[self.last_disc_state][self.last_enc_action][disc_state]*math.exp(-self.regularization_constant*abs(reward))
+            """
+            if disc_state not in self.:
+                self.transition_matrix[disc_state] = {}
+            if self.disc_enc_action:
                 if self.last_enc_action not in self.transition_matrix[self.last_enc_state]:
                     self.transition_matrix[self.last_enc_state][self.last_enc_action] = {enc_state:1}
                 elif enc_state not in self.transition_matrix[self.last_enc_state][self.last_enc_action]:
                     self.transition_matrix[self.last_enc_state][self.last_enc_action][enc_state] = 1
                 else:
                     self.transition_matrix[self.last_enc_state][self.last_enc_action][enc_state] += 1
+            """
             self.last_enc_state = enc_state
             self.last_enc_action = enc_action
+            self.last_disc_state = disc_state
 
         if (not self.policy_frozen):
+            self.seen_expanded_states[tuple(self.stateEncoder(observation))] = True
             self.update(observation, act, reward)
 
         self.last_state = observation
@@ -140,7 +169,7 @@ class MarioAgent(Agent):
         if inMessage.startswith("save_policy"):
             splitString=inMessage.split(" ")
             self.saveQFun(splitString[1])
-            print "Saved.";
+            print "Saved."
             return "message understood, saving policy"
         if inMessage.startswith("load_policy"):
             splitString=inMessage.split(" ")
@@ -164,7 +193,6 @@ class MarioAgent(Agent):
         if inMessage.startswith("unfreeze_transition_learning"):
             self.transition_learning_frozen=False
             return "message understood, transition learning unfrozen"        
-        return None
         if inMessage.startswith("train_TNN"):
             print 'Training TNN'
             self.trainTNN()
@@ -178,7 +206,58 @@ class MarioAgent(Agent):
             self.loadTprobs(splitString[1])
             print "Loaded.";
             return "message understood, loading Tprobs"
+        if inMessage.startswith("save_state_reps"): #Save the tuples corresponding to each state.
+            enc_states = []
+            for state in self.seen_expanded_states.keys():
+                enc_states.append(tuple(self.Q.getHiddenLayerRepresentation(list(state))))
+            splitstring = inMessage.split()
+            outfile = open(splitstring[1],'w')
+            pickle.dump(enc_states,outfile)
+        #Once we have frozen our state reps, this function discretizes them and populates the self.secondColBins and self.thirdColBins arrays
+        if inMessage.startswith("get_bins_from_state_reps"):
+            enc_states = []
+            for state in self.seen_expanded_states.keys():
+                curr_rep = tuple(self.Q.getHiddenLayerRepresentation(list(state)))
+                enc_states.append([curr_rep[0][0], curr_rep[1][0], curr_rep[2][0]])
+            enc_states = np.array(enc_states)
+            second_col = enc_states[:,1]
+            self.secondColBins = self.getBins(second_col)
+            third_col = enc_states[:,2]
+            self.thirdColBins = self.getBins(third_col)
 
+            self.discretization_done = True
+
+        if inMessage.startswith("save_phi_u_peeyu"):
+            splitstring = inMessage.split()
+            phioutfile = open(splitstring[1],'w')
+            pickle.dump(self.phi_mat,phioutfile)
+
+            uoutfile = open(splitstring[2],'w')
+            pickle.dump(self.U_mat,uoutfile)
+
+            puoutfile = open(splitstring[3],'w')
+            pickle.dump(self.Peey_U_mat,puoutfile)
+        return None
+
+    #Get the discretized states. Assumes that the bins are available.
+    def getDiscretizedState(self,enc_state):
+        
+        second_elem = enc_state[1][0]
+        third_elem = enc_state[2][0]
+        disc_tuple = (np.digitize([second_elem],self.secondColBins)[0],np.digitize([third_elem],self.thirdColBins)[0])
+        return (self.n_bins+3)*disc_tuple[0]+disc_tuple[1]
+
+    def getBins(self,i_array):
+        bins = [0.0]
+        i_array.sort()
+
+        i = 0
+        while i < len(i_array):
+            bins.append(i_array[i])
+            i += len(i_array)/self.n_bins
+        bins.append(1.0)
+        return np.array(bins)
+                
     def getMonsters(self, observation):
         monsters = []
         i = 0

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from consoleTrainerHelper import *
 
 def trainAgent():
-    episodesToRun = 1000 # param
+    episodesToRun = 10 # param
     exp = 1.0 # epsilon?
 
     totalSteps = 0
@@ -62,12 +62,14 @@ def trainAgent():
         results2.append(sum(raw_results[i-100:i])/100.0)
 
     #plt.plot(results1, color='red', label='Random')
-    plt.plot(results2, color='blue', label='Neural Q-Network')
-    plt.xlabel('Episode Number')
-    plt.ylabel('Mean Total Reward over 100 Episodes')
-    plt.legend()
-    plt.show()
+#    plt.plot(results2, color='blue', label='Neural Q-Network')
+#    plt.xlabel('Episode Number')
+#    plt.ylabel('Mean Total Reward over 100 Episodes')
+#    plt.legend()
+#    plt.show()
 
+#    RLGlue.RL_agent_message("save_state_reps state_reps.dat")
+    RLGlue.RL_agent_message("get_bins_from_state_reps")
     RLGlue.RL_agent_message("save_policy qfun.dat")
 
     # Transition Probs learning
@@ -89,10 +91,11 @@ def trainAgent():
         totalSteps += thisSteps
     print "Total steps : %d\n" % (totalSteps)
 
-    RLGlue.RL_agent_message("savetransmatrix transitionProbs.dat")
+#    RLGlue.RL_agent_message("savetransmatrix transitionProbs.dat")
+    RLGlue.RL_agent_message("save_phi_u_peeyu phi_mat.dat u_mat.dat peeyush_u_mat.dat")
 
     # Train TNN
-    RLGlue.RL_agent_message("train_TNN")
+#    RLGlue.RL_agent_message("train_TNN")
 
 def testAgent():
     episodesToRun = 50
