@@ -194,7 +194,18 @@ class q_agent(Agent):
         lastState=self.lastObservation.intArray[0]
         lastAction=self.lastAction.intArray[0]
 
-        newIntAction=self.egreedy(newState)
+        # Assuming option is currently running, choose action based on membership ascent
+        s = self.valid_states.index(newState) # row index
+        newIntAction=1
+        maxVal = 0
+        for a in xrange(4): 
+            print max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+            action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+            if action_pref > maxVal:
+                newIntAction = a
+                maxVal = action_pref
+
+        print 'Action chosen: ',newIntAction
 
         # update q-value
         Q_sa=self.value_function[lastState][lastAction]
