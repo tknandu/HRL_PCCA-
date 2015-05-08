@@ -147,7 +147,6 @@ class q_agent(Agent):
         self.lastObservation=copy.deepcopy(observation)
 
         self.episode += 1
-
         return returnAction
     
     def agent_step(self,reward, observation):

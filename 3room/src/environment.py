@@ -136,6 +136,37 @@ class threeroom_environment(Environment):
             outfile = open(splitstring[1],'w')
             pickle.dump(tmatrix,outfile)
 
+        if inMessage.startswith("dumppmatrix"):
+
+            pmatrix = np.zeros((len(self.validstates),4,len(self.validstates)),dtype=np.float)
+            for (state_i,state) in enumerate(self.validstates):
+                (row,col) = self.calculateCoordsFromFlatState(state)
+                if self.checkValid(row,col-1): #Left
+                    pmatrix[state_i][0][self.validstates.index(self.calculateFlatState(row,col-1))] = 1
+                else:
+                    pmatrix[state_i][0][state_i] = 1
+
+                if self.checkValid(row,col+1): #Right
+                    pmatrix[state_i][1][self.validstates.index(self.calculateFlatState(row,col+1))] = 1
+                else:
+                    pmatrix[state_i][1][state_i] = 1
+ 
+                if self.checkValid(row-1,col): #Up
+                    pmatrix[state_i][2][self.validstates.index(self.calculateFlatState(row-1,col))] = 1
+                else:
+                    pmatrix[state_i][2][state_i] = 1
+ 
+                if self.checkValid(row+1,col): #Down
+                    pmatrix[state_i][3][self.validstates.index(self.calculateFlatState(row+1,col))] = 1
+                else:
+                    pmatrix[state_i][3][state_i] = 1
+ 
+ 
+            print 'HH'
+            splitstring = inMessage.split()
+            outfile = open(splitstring[1],'w')
+            pickle.dump(pmatrix,outfile)
+
         return "SamplesMinesEnvironment(Python) does not respond to that message."
 
     def setStartState(self):
