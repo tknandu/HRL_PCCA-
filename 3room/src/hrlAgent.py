@@ -96,12 +96,16 @@ class q_agent(Agent):
         chimatfile = open('chi_mat.dat','r')
         unpickler = pickle.Unpickler(chimatfile)
         self.chi_mat = np.mat(unpickler.load())
-        
+
+        self.absStateMembership = []
+        for (row_i,row) in enumerate(self.chi_mat):
+            self.absStateMembership.append(row.argmax())
+
         #This is just to get a mapping from the indices of chi_mat to the values returned by the environment
         validstatefile = open('valid_states.dat','r')
         unpickler = pickle.Unpickler(validstatefile)
         self.valid_states = unpickler.load()
-#        print self.valid_states
+        print self.valid_states
 
         self.lastAction=Action()
         self.lastObservation=Observation()
@@ -111,7 +115,8 @@ class q_agent(Agent):
         self.t_mat = np.mat(unpickler.load())
 
         self.abstract_t_mat = self.chi_mat.T*self.t_mat*self.chi_mat
-        
+        print self.abstract_t_mat
+
 
         
     def egreedy(self, state):

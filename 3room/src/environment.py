@@ -192,7 +192,7 @@ class threeroom_environment(Environment):
         if (theAction == 0):#move left
             newCol = self.agentCol - 1
 
-        if (theAction == 1): #move right
+        if (theAction == 1):#move right
             newCol = self.agentCol + 1
 
         if (theAction == 2):#move up
