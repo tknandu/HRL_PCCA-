@@ -71,6 +71,9 @@ class q_agent(Agent):
     
     episode = 0
 
+    optionCurrentlyOn = False
+    normalizationC = 0.5
+
     def agent_init(self,taskSpecString):
         TaskSpec = TaskSpecVRLGLUE3.TaskSpecParser(taskSpecString)
         if TaskSpec.valid:
@@ -98,13 +101,21 @@ class q_agent(Agent):
         self.chi_mat = np.mat(unpickler.load())
 
         self.absStateMembership = []
+        self.statesInAbsState = [[] for i in xrange(self.chi_mat.shape[1])]
         for (row_i,row) in enumerate(self.chi_mat):
             self.absStateMembership.append(row.argmax())
+            self.statesInAbsState[row.argmax()].append(row_i)
+
+        print 'Abstract state to which state belongs:'
+        print self.absStateMembership
+        print 'States in each abstract state:'
+        print self.statesInAbsState
 
         #This is just to get a mapping from the indices of chi_mat to the values returned by the environment
         validstatefile = open('valid_states.dat','r')
         unpickler = pickle.Unpickler(validstatefile)
         self.valid_states = unpickler.load()
+        print 'Mapping from row indices to flat state rep:'
         print self.valid_states
 
         self.lastAction=Action()
@@ -113,12 +124,15 @@ class q_agent(Agent):
         tmatrixfile = open('tmatrixperfect.dat','r')
         unpickler = pickle.Unpickler(tmatrixfile)
         self.t_mat = np.mat(unpickler.load())
-
-        self.abstract_t_mat = self.chi_mat.T*self.t_mat*self.chi_mat
-        print self.abstract_t_mat
-
-
         
+        pmatrixfile = open('pmatrixperfect.dat','r')
+        self.p_mat = pickle.load(pmatrixfile)
+
+        self.connect_mat = self.chi_mat.T*self.t_mat*self.chi_mat
+        print 'Connectivity matrix:'
+        print self.connect_mat
+
+
     def egreedy(self, state):
         maxIndex=0
         a=1
@@ -132,14 +146,38 @@ class q_agent(Agent):
         return a
 
     def agent_start(self,observation):
+
+        self.optionCurrentlyOn = False
+
         theState=observation.intArray[0]
 
-        if dynamicEpsilon=='1':
-            self.q_epsilon = 0.5-0.0008*self.episode
-        else:
-            self.q_epsilon = 0.1
+        # Composing an option from S_i to S_j
+        self.optionCurrentlyOn = True
 
-        thisIntAction=self.egreedy(theState)
+        # 1. Find the abstract state you belong to & going to
+        s = self.valid_states.index(theState) # row index
+        self.option_S_i = self.absStateMembership[s] # initiation step
+
+        self.option_S_j = 1 #((-(self.connect_mat[self.option_S_i])).argsort())[1] # actually, we will have to choose S_j based on SMDP
+
+        print 'Shape of first term: ',self.p_mat[s][0].shape
+        print self.option_S_j
+        print 'Shape of second term: ', (self.chi_mat.T[self.option_S_j]).T.shape
+
+        print np.dot(self.p_mat[s][0],self.chi_mat.T[self.option_S_j].T)
+
+        # 2. Choose action based on membership ascent
+        thisIntAction=1
+        maxVal = 0
+        for a in xrange(4): 
+            print self.normalizationC*(np.sum(np.dot(self.p_mat[s][a],self.chi_mat.T[self.option_S_j].T)) - self.chi_mat.T[self.option_S_j])
+            action_pref = self.normalizationC*(np.sum(np.dot(self.p_mat[s][a],self.chi_mat.T[self.option_S_j].T)) - self.chi_mat.T[self.option_S_j])
+            if action_pref > maxVal:
+                thisIntAction = a
+                maxVal = action_pref
+
+        print 'Action chosen: ',thisIntAction
+
         returnAction=Action()
         returnAction.intArray=[thisIntAction]
         
