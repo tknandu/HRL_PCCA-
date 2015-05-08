@@ -234,8 +234,8 @@ class PCCA():
         print np.sum(qc_matrix, axis=1)
         print "-- cluster weights: first column of rot_matrix --"
         print cluster_weights
-        print "-- cluster weights: numpy.dot(node_weights, chi_matrix) --"
-        print np.dot(corr_node_weights, chi_matrix)
+#        print "-- cluster weights: numpy.dot(node_weights, chi_matrix) --"
+#        print np.dot(corr_node_weights, chi_matrix)
         print "-- chi matrix column max values --"
         print np.max(chi_matrix, axis=0)
         print "-- chi matrix row sums --"
