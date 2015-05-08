@@ -109,7 +109,7 @@ class threeroom_environment(Environment):
                     if self.checkValid(row,col):
                         states.append(self.calculateFlatState(row,col))
 
-            tmatrix = np.zeros((len(states),len(states)),dtype=np.float)
+            tmatrix = np.zeros((numRows*numCols, numRows*numCols),dtype=np.float)
             for (state_i,state) in enumerate(states):
                 valid_successors = []
                 (row,col) = self.calculateCoordsFromFlatState(state)
@@ -122,7 +122,7 @@ class threeroom_environment(Environment):
                 if self.checkValid(row-1,col):
                     valid_successors.append(self.calculateFlatState(row-1,col))
                 for vs in valid_successors:
-                    tmatrix[state_i][states.index(vs)] = float(1)/len(valid_successors)
+                    tmatrix[state][vs] = float(1)/len(valid_successors)
  
             splitstring = inMessage.split()
             outfile = open(splitstring[1],'w')
