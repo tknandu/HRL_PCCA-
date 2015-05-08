@@ -176,7 +176,9 @@ class PCCA():
         print "\n### Sorted eigenvalues of symmetrized S matrix:"
         for (idx, ev, gap, wgap) in zip(range(1, len(eigvalues)+1), eigvalues, gaps, wgaps):
             print "EV%04d: %f, gap to next: %f, EV-weighted gap to next: %f" % (idx, ev, gap, wgap)
-        n_clusters = np.argmax(wgaps)+1
+        #TODO wgaps to gaps was done
+        n_clusters = 3 
+#        n_clusters = np.argmax(wgaps)+1
         print "\n### Maximum gap %f after top %d eigenvalues." % (np.max(gaps), n_clusters)
         print "### Maximum EV-weighted gap %f after top %d eigenvalues." % (np.max(wgaps), np.argmax(wgaps)+1)
         sys.stdout.flush()

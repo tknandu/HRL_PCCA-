@@ -110,7 +110,9 @@ class threeroom_environment(Environment):
             self.printState()
             return "Message understood.  Printed the state."
 
-        
+        if inMessage.startswith("printabstractstates"):
+            self.printAbstractStates()
+         
         if inMessage.startswith("dumptmatrix"):
 
             tmatrix = np.zeros((len(self.validstates),len(self.validstates)),dtype=np.float)
@@ -233,7 +235,33 @@ class threeroom_environment(Environment):
                     if self.map[row][col] == self.FREE:
                         print " ",
         print
-        
+
+    def printAbstractStates(self):
+        argmaxes = [2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 1, 1, 1, 1, 1, 1, 2, 2, 2, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0, 2, 2, 2, 0, 0, 0, 0, 0, 0]
+        numRows=len(self.worldmap)
+        numCols=len(self.worldmap[0])
+        for row in range(0,numRows):
+            print
+            print "Row: "+str(row)+" ",
+            for col in range(0,numCols):
+                if self.checkValid(row,col):
+                    flat = self.calculateFlatState(row,col)
+                    flat_i = self.validstates.index(flat)
+                    print unicode(argmaxes[flat_i]),
+                else:
+                    print "X",
+
+                """
+                if self.map[row][col] == self.GOAL:
+                    print "G",
+                if self.map[row][col] == self.WALL:
+                    print "X",
+                if self.map[row][col] == self.START:
+                    print "S",
+                if self.map[row][col] == self.FREE:
+                    print " ",
+                """
+        print
 
 if __name__=="__main__":
     EnvironmentLoader.loadEnvironment(threeroom_environment())

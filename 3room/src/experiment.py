@@ -33,7 +33,8 @@ NO_EPISODES = 500
 TIME_LIMIT  = 100000
 
 RLGlue.RL_init()
-RLGlue.RL_env_message("dumptmatrix tmatrixperfect.dat")
+#RLGlue.RL_env_message("dumptmatrix tmatrixperfect.dat")
+RLGlue.RL_env_message("printabstractstates")
 assert False
 
 returnVsEpisode = np.zeros(NO_EPISODES)
