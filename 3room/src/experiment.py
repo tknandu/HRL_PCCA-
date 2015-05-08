@@ -32,11 +32,23 @@ NO_EPISODES = 500
 
 TIME_LIMIT  = 100000
 
+
+whichEpisode=0
+def runEpisode(stepLimit):
+    # stepLimit of 0 implies no limit
+    global whichEpisode
+    terminal=RLGlue.RL_episode(stepLimit)
+    totalSteps=RLGlue.RL_num_steps()
+    totalReward=RLGlue.RL_return()
+    
+    print "Episode "+str(whichEpisode)+"\t "+str(totalSteps)+ " steps \t" + str(totalReward) + " total reward\t " 
+    
+    whichEpisode=whichEpisode+1
+
 RLGlue.RL_init()
 #RLGlue.RL_env_message("dumptmatrix tmatrixperfect.dat")
-#RLGlue.RL_env_message("printabstractstates")
-print 'Here'
-RLGlue.RL_env_message("dumppmatrix pmatrixperfect.dat")
+RLGlue.RL_env_message("printabstractstates")
+runEpisode(0)
 assert False
 
 returnVsEpisode = np.zeros(NO_EPISODES)
@@ -151,18 +163,6 @@ f2.show()
 
 raw_input()
 """
-
-whichEpisode=0
-def runEpisode(stepLimit):
-    # stepLimit of 0 implies no limit
-    global whichEpisode
-    terminal=RLGlue.RL_episode(stepLimit)
-    totalSteps=RLGlue.RL_num_steps()
-    totalReward=RLGlue.RL_return()
-    
-    print "Episode "+str(whichEpisode)+"\t "+str(totalSteps)+ " steps \t" + str(totalReward) + " total reward\t " 
-    
-    whichEpisode=whichEpisode+1
 
 
 RLGlue.RL_init()

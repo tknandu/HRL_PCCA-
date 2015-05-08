@@ -61,7 +61,7 @@ class threeroom_environment(Environment):
     def env_start(self):
         self.setStartState()
         returnObs=Observation()
-        returnObs.intArray=[self.calculateFlatState()]
+        returnObs.intArray=[self.calculateFlatState(self.agentRow,self.agentCol)]
         return returnObs
         
     def env_step(self,thisAction):
@@ -73,7 +73,7 @@ class threeroom_environment(Environment):
         self.updatePosition(thisAction.intArray[0])
 
         theObs=Observation()
-        theObs.intArray=[self.calculateFlatState()]
+        theObs.intArray=[self.calculateFlatState(self.agentRow,self.agentCol)]
 
         returnRO=Reward_observation_terminal()
         returnRO.r=self.calculateReward()
