@@ -26,9 +26,9 @@ from sys import argv
 #script, goal = argv
 
 gamma       = 1
-
 NO_RUNS     = 50
-NO_EPISODES = 500
+
+NO_EPISODES = 100
 
 TIME_LIMIT  = 100000
 
@@ -48,9 +48,10 @@ def runEpisode(stepLimit):
 RLGlue.RL_init()
 #RLGlue.RL_env_message("dumptmatrix tmatrixperfect.dat")
 RLGlue.RL_env_message("printabstractstates")
-runEpisode(0)
-assert False
-
+for i in xrange(NO_EPISODES):
+    runEpisode(0)
+ 
+'''
 returnVsEpisode = np.zeros(NO_EPISODES)
 timeVsEpisode = np.zeros(NO_EPISODES)
 
@@ -168,3 +169,4 @@ raw_input()
 RLGlue.RL_init()
 for i in xrange(NO_EPISODES):
     runEpisode(0)
+'''

@@ -74,6 +74,8 @@ class q_agent(Agent):
 
     optionCurrentlyOn = False
     normalizationC = 0.5
+    currentOptionTime = 0
+    currentOptionReward = 0.0
 
     def agent_init(self,taskSpecString):
         TaskSpec = TaskSpecVRLGLUE3.TaskSpecParser(taskSpecString)
@@ -145,41 +147,57 @@ class q_agent(Agent):
         shuffle(temp)
         a = max(temp,key=itemgetter(1))[0]
 
-
+        while a>= self.numActions and not a==np.where((np.array(-(self.connect_mat[self.absStateMembership[state]])).argsort())[0] == 1)[0][0]:
+            shuffle(temp)
+            a = max(temp,key=itemgetter(1))[0]
 
         return a
 
     def agent_start(self,observation):
 
         self.optionCurrentlyOn = False
-
         theState=observation.intArray[0]
-
-        # Composing an option from S_i to S_j
-        self.optionCurrentlyOn = True
-
-        # 1. Find the abstract state you belong to & going to
         s = self.valid_states.index(theState) # row index
-        self.option_S_i = self.absStateMembership[s] # initiation step
-        self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0]# actually, we will have to choose S_j based on SMDP
 
+        # Choose either a primitive action or option
+        a = self.egreedy(s)
 
-        #print 'Shape of first term: ',self.p_mat[s][0].shape
-        #print self.option_S_j
-        #print 'Shape of second term: ', (self.chi_mat.T[self.option_S_j]).T.shape
+        if a<self.numActions:
+            # Primitive action
+            thisIntAction = a
+            self.optionCurrentlyOn = False
+            print 'Primitive action chosen'
 
-        #print 'Debug:'
-        #print self.chi_mat[0,0]
+        else:    
+            # Composing an option from S_i to S_j
+            self.optionCurrentlyOn = True
+            self.currentOptionTime = 0
+            self.curentOptionStartState = s
+            self.currentOptionReward = 0.0
 
-        # 2. Choose action based on membership ascent
-        thisIntAction=1
-        maxVal = 0
-        for a in xrange(4): 
-            print 'Action: ',a,' ',max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
-            action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
-            if action_pref > maxVal:
-                thisIntAction = a
-                maxVal = action_pref
+            # 1. Find the abstract state you belong to & going to
+            self.option_S_i = self.absStateMembership[s] # initiation step
+            self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+
+            #print 'Shape of first term: ',self.p_mat[s][0].shape
+            #print self.option_S_j
+            #print 'Shape of second term: ', (self.chi_mat.T[self.option_S_j]).T.shape
+
+            #print 'Debug:'
+            #print self.chi_mat[0,0]
+
+            # 2. Choose action based on membership ascent
+            thisIntAction=1
+            maxVal = 0
+            for a in xrange(4): 
+                print 'Action: ',a,' ',max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                if action_pref > maxVal:
+                    thisIntAction = a
+                    maxVal = action_pref
+                print 'Option chosen'
+
+            self.currentOptionTime += 1
 
         print 'Action chosen: ',thisIntAction
 
@@ -197,19 +215,58 @@ class q_agent(Agent):
         lastState=self.lastObservation.intArray[0]
         lastAction=self.lastAction.intArray[0]
 
-        newIntAction = 1 # initialization
+        s = self.valid_states.index(newState) # row index
 
-        # Check if an option is in action
+        # Check if an option is going on
         if self.optionCurrentlyOn:
-            s = self.valid_states.index(newState) # row index
+
+            # add reward to ongoing option
+            self.currentOptionReward += reward
 
             # Decide whether to terminate option
             beta = min(math.log(self.chi_mat[s,self.option_S_i])/math.log(self.chi_mat[s,self.option_S_j]),1)
             if self.randGenerator.random() < beta:
                 self.optionCurrentlyOn = False
-                # Choose next option/action based on SMDP 
                 print 'Terminated option'
-                assert False
+
+                # Update Q value of terminated option
+                Q_sa=self.value_function[self.curentOptionStartState][self.numActions+self.option_S_j] # 4... - options
+                max_Q_sprime_a = max(self.value_function[self.valid_states.index(newState)])     
+                new_Q_sa=Q_sa + self.q_stepsize  * (self.currentOptionReward + math.pow(self.q_gamma,self.currentOptionTime) * max_Q_sprime_a - Q_sa)
+                if not self.policyFrozen:
+                    self.value_function[self.curentOptionStartState][self.numActions+self.option_S_j]=new_Q_sa                
+
+                # Choose either a primitive action or option
+                a = self.egreedy(s)
+
+                if a<self.numActions:
+                    # Primitive action
+                    newIntAction = a
+                    self.optionCurrentlyOn = False
+                    print 'Primitive action chosen'
+
+                else:    
+                    # Composing an option from S_i to S_j
+                    self.optionCurrentlyOn = True
+                    self.currentOptionTime = 0
+                    self.curentOptionStartState = s
+                    self.currentOptionReward = 0.0
+
+                    # 1. Find the abstract state you belong to & going to
+                    self.option_S_i = self.absStateMembership[s] # initiation step
+                    self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+
+                    # 2. Choose action based on membership ascent
+                    newIntAction=1
+                    maxVal = 0
+                    for a in xrange(4): 
+                        print 'Action: ',a,' ',max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                        action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                        if action_pref > maxVal:
+                            newIntAction = a
+                            maxVal = action_pref
+                        print 'Option chosen'
+                    self.currentOptionTime += 1
 
             else:
                 # If not terminated, choose action based on membership ascent
@@ -221,16 +278,51 @@ class q_agent(Agent):
                     if action_pref > maxVal:
                         newIntAction = a
                         maxVal = action_pref
+                self.currentOptionTime += 1
 
+        # No option currently running
+        else:
+
+            # update Q-value of last primitive action
+            Q_sa=self.value_function[self.valid_states.index(lastState)][lastAction]
+            max_Q_sprime_a = max(self.value_function[self.valid_states.index(newState)])     
+            new_Q_sa=Q_sa + self.q_stepsize  * (reward + self.q_gamma * max_Q_sprime_a - Q_sa)
+            if not self.policyFrozen:
+                self.value_function[self.valid_states.index(lastState)][lastAction]=new_Q_sa
+
+            # Choose either a primitive action or option
+            a = self.egreedy(s)
+
+            if a<self.numActions:
+                # Primitive action
+                newIntAction = a
+                self.optionCurrentlyOn = False
+                print 'Primitive action chosen'
+
+            else:    
+                # Composing an option from S_i to S_j
+                self.optionCurrentlyOn = True
+                self.currentOptionTime = 0
+                self.curentOptionStartState = s
+                self.currentOptionReward = 0.0
+
+                # 1. Find the abstract state you belong to & going to
+                self.option_S_i = self.absStateMembership[s] # initiation step
+                self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+
+                # 2. Choose action based on membership ascent
+                newIntAction=1
+                maxVal = 0
+                for a in xrange(4): 
+                    print 'Action: ',a,' ',max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                    action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                    if action_pref > maxVal:
+                        newIntAction = a
+                        maxVal = action_pref
+                    print 'Option chosen'
+                self.currentOptionTime += 1
+        
         print 'Action chosen: ',newIntAction
-
-        # update q-value
-        Q_sa=self.value_function[lastState][lastAction]
-        max_Q_sprime_a = max(self.value_function[newState])     
-        new_Q_sa=Q_sa + self.q_stepsize  * (reward + self.q_gamma * max_Q_sprime_a - Q_sa)
-
-        if not self.policyFrozen:
-            self.value_function[lastState][lastAction]=new_Q_sa
 
         returnAction=Action()
         returnAction.intArray=[newIntAction]
@@ -244,14 +336,20 @@ class q_agent(Agent):
         lastState=self.lastObservation.intArray[0]
         lastAction=self.lastAction.intArray[0]
 
-        Q_sa=self.value_function[lastState][lastAction]
+        if self.optionCurrentlyOn:
+            self.currentOptionReward += reward
+            # Update Q value of terminated option
+            Q_sa=self.value_function[self.curentOptionStartState][self.numActions+self.option_S_j] # 4... - options 
+            new_Q_sa=Q_sa + self.q_stepsize  * (self.currentOptionReward - Q_sa)
+            if not self.policyFrozen:
+                self.value_function[self.curentOptionStartState][self.numActions+self.option_S_j]=new_Q_sa                
+        else:
+            # update Q-value of last primitive action
+            Q_sa=self.value_function[self.valid_states.index(lastState)][lastAction]    
+            new_Q_sa=Q_sa + self.q_stepsize  * (reward - Q_sa)
+            if not self.policyFrozen:
+                self.value_function[self.valid_states.index(lastState)][lastAction]=new_Q_sa
 
-        new_Q_sa=Q_sa + self.q_stepsize * (reward - Q_sa)
-
-        if not self.policyFrozen:
-            self.value_function[lastState][lastAction]=new_Q_sa
-
-    
     def agent_cleanup(self):
         pass
 
