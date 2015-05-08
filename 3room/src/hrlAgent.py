@@ -32,6 +32,7 @@ from rlglue.utils import TaskSpecVRLGLUE3
 from random import Random, shuffle
 from operator import itemgetter
 from sys import argv
+import numpy as np
 
 # This is a very simple q agent for discrete-action, discrete-state
 # environments.  It uses epsilon-greedy exploration.
