@@ -61,6 +61,7 @@ class MarioAgent(Agent):
     numActions = 12
     randGenerator=random.Random()
 
+
     def agent_init(self,taskSpecString):
         self.policy_frozen = False
         self.total_steps = 0
@@ -90,6 +91,7 @@ class MarioAgent(Agent):
         self.U_mat = np.zeros((self.n_disc_states,12,self.n_disc_states),dtype=float)
 
         self.regularization_constant = 0.4 #For rewards incorporated into transition structure
+        self.episodesRun = 100 #This is just used to generate the file names of the stored data
 
         #The (probably) incorrect U_mat that Peeyush writes in his algo
         self.Peey_U_mat = np.zeros((self.n_disc_states,12,self.n_disc_states),dtype=float)
@@ -103,11 +105,11 @@ class MarioAgent(Agent):
 
         """
         # Obtain T & P matrices
-        tmatfile = open('t_mat2000.dat','r')
+        tmatfile = open('t_mat' + str(self.episodesRun) + '.dat','r')
         unpickler = pickle.Unpickler(tmatfile)
         self.t_mat = unpickler.load()
 
-        pmatfile = open('p_mat2000.dat','r')
+        pmatfile = open('p_mat' + str(self.episodesRun) + '.dat','r')
         unpickler = pickle.Unpickler(pmatfile)
         self.p_mat = unpickler.load()
 
@@ -124,7 +126,7 @@ class MarioAgent(Agent):
             self.absStateMembership.append(row.argmax())
             self.statesInAbsState[row.argmax()].append(row_i)
 
-#        self.valid_states = 
+#        self.valid_states =  NOT NECESSARY IN MARIO
 
         self.connect_mat = self.chi_mat.T*self.t_mat*self.chi_mat
         """
@@ -153,7 +155,8 @@ class MarioAgent(Agent):
         if self.option_learning_frozen == False:
             self.optionCurrentlyOn = False
             theState=self.getDiscretizedState(tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(observation))))
-            s = self.valid_states.index(theState) # row index
+            s = theState #valid_states is not needed in Mario
+#            s = self.valid_states.index(theState) # row index
 
             # Choose either a primitive action or option
             a = self.egreedy(s)
@@ -228,7 +231,8 @@ class MarioAgent(Agent):
             lastState = self.getDiscretizedState(tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(last_state))))
             lastAction = self.last_action.intArray[0]
 
-            s = self.valid_states.index(newState) # row index
+            s = newState
+#            s = self.valid_states.index(newState) # row index
 
             # Check if an option is going on
             if self.optionCurrentlyOn:
@@ -244,7 +248,7 @@ class MarioAgent(Agent):
 
                     # Update Q value of terminated option
                     Q_sa=self.value_function[self.curentOptionStartState][self.numActions+self.option_S_j] # 4... - options
-                    max_Q_sprime_a = max(self.value_function[self.valid_states.index(newState)])     
+                    max_Q_sprime_a = max(self.value_function[newState])     
                     new_Q_sa=Q_sa + self.q_stepsize  * (self.currentOptionReward + math.pow(self.q_gamma,self.currentOptionTime) * max_Q_sprime_a - Q_sa)
                     self.value_function[self.curentOptionStartState][self.numActions+self.option_S_j]=new_Q_sa                
 
@@ -296,10 +300,10 @@ class MarioAgent(Agent):
             else:
 
                 # update Q-value of last primitive action
-                Q_sa=self.value_function[self.valid_states.index(lastState)][lastAction]
-                max_Q_sprime_a = max(self.value_function[self.valid_states.index(newState)])     
+                Q_sa=self.value_function[lastState][lastAction]
+                max_Q_sprime_a = max(self.value_function[newState])     
                 new_Q_sa=Q_sa + self.q_stepsize  * (reward + self.q_gamma * max_Q_sprime_a - Q_sa)
-                self.value_function[self.valid_states.index(lastState)][lastAction]=new_Q_sa
+                self.value_function[lastState][lastAction]=new_Q_sa
 
                 # Choose either a primitive action or option
                 a = self.egreedy(s)
@@ -392,9 +396,9 @@ class MarioAgent(Agent):
                 self.value_function[self.curentOptionStartState][self.numActions+self.option_S_j]=new_Q_sa                
             else:
                 # update Q-value of last primitive action
-                Q_sa=self.value_function[self.valid_states.index(lastState)][lastAction]    
+                Q_sa=self.value_function[lastState][lastAction]    
                 new_Q_sa=Q_sa + self.q_stepsize  * (reward - Q_sa)
-                self.value_function[self.valid_states.index(lastState)][lastAction]=new_Q_sa
+                self.value_function[lastState][lastAction]=new_Q_sa
 
 
     def agent_cleanup(self):
@@ -446,6 +450,7 @@ class MarioAgent(Agent):
             return "message understood, option learning frozen"    
         if inMessage.startswith("unfreeze_option_learning"):
             self.option_learning_frozen=False
+            self.loadBinsFromDumpFiles()
             return "message understood, option learning unfrozen"   
         if inMessage.startswith("train_TNN"):
             print 'Training TNN'
@@ -489,7 +494,7 @@ class MarioAgent(Agent):
 
             self.discretization_done = True
 
-        if inMessage.startswith("save_phi_u_peeyu"):
+        if inMessage.startswith("save_phi"):
             splitstring = inMessage.split()
             phioutfile = open(splitstring[1],'w')
             pickle.dump(self.phi_mat,phioutfile)
@@ -500,6 +505,16 @@ class MarioAgent(Agent):
             puoutfile = open(splitstring[3],'w')
             pickle.dump(self.Peey_U_mat,puoutfile)
         return None
+
+
+    def loadBinsFromDumpFiles(self):
+        secondcolfile = open('secondcolbins' + str(self.episodesRun) + '.dat','r')
+        unpickler = pickle.Unpickler(secondcolfile)
+        self.secondColBins = unpickler.load()
+
+        thirddcolfile = open('thirdcolbins' + str(self.episodesRun) + '.dat','r')
+        unpickler = pickle.Unpickler(thirdcolfile)
+        self.thirdColBins = unpickler.load()
 
 
     #Get the discretized states. Assumes that the bins are available.
