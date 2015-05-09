@@ -28,7 +28,7 @@ from sys import argv
 gamma       = 1
 NO_RUNS     = 50
 
-NO_EPISODES = 10
+NO_EPISODES = 100
 
 TIME_LIMIT  = 100000
 

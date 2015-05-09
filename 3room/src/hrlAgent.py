@@ -147,27 +147,6 @@ class q_agent(Agent):
         shuffle(temp)
         a = max(temp,key=itemgetter(1))[0]
 
-
-        #Okay I'm not sure exactly what you're trying to do here, so I can't sort this out.
-        #Anyway, this is what is causing the infinite loop.
-        #Note that there was a cup in the code earlier.
-        #If you want the abstract state whose value is second highest in that row
-        #use a==np.array(-(self.connect_mat[self.absStateMembership[state]])).argsort()[0][1]:
-       
-        i = 0
-        while a>= self.numActions and not a==np.array(-(self.connect_mat[self.absStateMembership[state]])).argsort()[0][1]:
-            shuffle(temp)
-            a = max(temp,key=itemgetter(1))[0]
-            i += 1
-            if i > 10:
-                print self.absStateMembership[state]
-                print np.array(-(self.connect_mat[self.absStateMembership[state]]))
-                print np.array(-(self.connect_mat[self.absStateMembership[state]])).argsort()
-                print np.array(-(self.connect_mat[self.absStateMembership[state]])).argsort()[0][1]
-                print a
-                assert False
-     
-
         return a
 
     def agent_start(self,observation):
@@ -194,7 +173,7 @@ class q_agent(Agent):
 
             # 1. Find the abstract state you belong to & going to
             self.option_S_i = self.absStateMembership[s] # initiation step
-            self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+            self.option_S_j = a-self.numActions # actually, we will have to choose S_j based on SMDP
 
             #print 'Shape of first term: ',self.p_mat[s][0].shape
             #print self.option_S_j
@@ -271,7 +250,7 @@ class q_agent(Agent):
 
                     # 1. Find the abstract state you belong to & going to
                     self.option_S_i = self.absStateMembership[s] # initiation step
-                    self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+                    self.option_S_j = a-self.numActions # actually, we will have to choose S_j based on SMDP
 
                     # 2. Choose action based on membership ascent
                     newIntAction=1
@@ -325,7 +304,7 @@ class q_agent(Agent):
 
                 # 1. Find the abstract state you belong to & going to
                 self.option_S_i = self.absStateMembership[s] # initiation step
-                self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+                self.option_S_j = a-self.numActions # actually, we will have to choose S_j based on SMDP
 
                 # 2. Choose action based on membership ascent
                 newIntAction=1

@@ -143,10 +143,6 @@ class MarioAgent(Agent):
         random.shuffle(temp)
         a = max(temp,key=itemgetter(1))[0]
 
-        while a>= self.numActions and not a==np.where((np.array(-(self.connect_mat[self.absStateMembership[state]])).argsort())[0] == 1)[0][0]:
-            random.shuffle(temp)
-            a = max(temp,key=itemgetter(1))[0]
-
         return a
 
     def agent_start(self,observation):
@@ -178,7 +174,7 @@ class MarioAgent(Agent):
 
                 # 1. Find the abstract state you belong to & going to
                 self.option_S_i = self.absStateMembership[s] # initiation step
-                self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+                self.option_S_j = a-self.numActions # actually, we will have to choose S_j based on SMDP
 
                 #print 'Shape of first term: ',self.p_mat[s][0].shape
                 #print self.option_S_j
@@ -271,7 +267,7 @@ class MarioAgent(Agent):
 
                         # 1. Find the abstract state you belong to & going to
                         self.option_S_i = self.absStateMembership[s] # initiation step
-                        self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+                        self.option_S_j = a-self.numActions # actually, we will have to choose S_j based on SMDP
 
                         # 2. Choose action based on membership ascent
                         newIntAction=1
@@ -324,7 +320,7 @@ class MarioAgent(Agent):
 
                     # 1. Find the abstract state you belong to & going to
                     self.option_S_i = self.absStateMembership[s] # initiation step
-                    self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+                    self.option_S_j = a-self.numActions # actually, we will have to choose S_j based on SMDP
 
                     # 2. Choose action based on membership ascent
                     newIntAction=1
