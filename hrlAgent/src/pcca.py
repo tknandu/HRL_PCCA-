@@ -177,7 +177,7 @@ class PCCA():
         for (idx, ev, gap, wgap) in zip(range(1, len(eigvalues)+1), eigvalues, gaps, wgaps):
             print "EV%04d: %f, gap to next: %f, EV-weighted gap to next: %f" % (idx, ev, gap, wgap)
         #TODO wgaps to gaps was done
-        n_clusters = 3 
+        n_clusters = 4 
 #        n_clusters = np.argmax(wgaps)+1
         print "\n### Maximum gap %f after top %d eigenvalues." % (np.max(gaps), n_clusters)
         print "### Maximum EV-weighted gap %f after top %d eigenvalues." % (np.max(wgaps), np.argmax(wgaps)+1)
@@ -190,7 +190,14 @@ class PCCA():
 
         # perform PCCA+
         # First two return-values "c_f" and "indicator" are not needed
-        (chi_matrix, rot_matrix) = self.cluster_by_isa(eigvectors, n_clusters)[2:]
+        n_clusters = 100
+        while n_clusters > 0:
+            try:
+                print n_clusters
+                (chi_matrix, rot_matrix) = self.cluster_by_isa(eigvectors, n_clusters)[2:]
+                assert False
+            except np.linalg.linalg.LinAlgError:
+                n_clusters -= 1
 
 
         # TODO: Is this optimization needed? What to do about the weights then?

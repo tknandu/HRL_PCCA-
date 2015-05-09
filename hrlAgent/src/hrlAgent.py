@@ -92,7 +92,7 @@ class MarioAgent(Agent):
         self.U_mat = np.zeros((self.n_disc_states,12,self.n_disc_states),dtype=float)
 
         self.regularization_constant = 0.4 #For rewards incorporated into transition structure
-        self.episodesRun = 100 #This is just used to generate the file names of the stored data
+        self.episodesRun = 2000 #This is just used to generate the file names of the stored data
 
         #The (probably) incorrect U_mat that Peeyush writes in his algo
         self.Peey_U_mat = np.zeros((self.n_disc_states,12,self.n_disc_states),dtype=float)
@@ -105,11 +105,11 @@ class MarioAgent(Agent):
         #####################################################################
 
         # Obtain T & P matrices
-        tmatfile = open('t_mat' + str(self.episodesRun) + '.dat','r')
+        tmatfile = open('noreward_t_mat' + str(self.episodesRun) + '.dat','r')
         unpickler = pickle.Unpickler(tmatfile)
         self.t_mat = unpickler.load()
 
-        pmatfile = open('p_mat' + str(self.episodesRun) + '.dat','r')
+        pmatfile = open('noreward_p_mat' + str(self.episodesRun) + '.dat','r')
         unpickler = pickle.Unpickler(pmatfile)
         self.p_mat = unpickler.load()
 
@@ -380,7 +380,7 @@ class MarioAgent(Agent):
     
         # When learning to play using options
         if self.option_learning_frozen == False:
-            lastState = self.getDiscretizedState(tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(last_state))))
+            lastState = self.getDiscretizedState(tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(self.last_state))))
             lastAction = self.last_action.intArray[0]
 
             if self.optionCurrentlyOn:
