@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from consoleTrainerHelper import *
 
 def trainAgent():
-    episodesToRun = 10 # param
+    episodesToRun = 1000 # param
     exp = 1.0 # epsilon?
 
     totalSteps = 0
@@ -92,7 +92,7 @@ def trainAgent():
     print "Total steps : %d\n" % (totalSteps)
 
 #    RLGlue.RL_agent_message("savetransmatrix transitionProbs.dat")
-    RLGlue.RL_agent_message("save_phi_u_peeyu phi_mat.dat u_mat.dat peeyush_u_mat.dat")
+    RLGlue.RL_agent_message("save_phi phi_mat1000.dat u_mat1000.dat peeyush_u_mat1000.dat")
 
     # Train TNN
 #    RLGlue.RL_agent_message("train_TNN")
