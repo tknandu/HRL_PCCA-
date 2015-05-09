@@ -70,9 +70,9 @@ def trainAgent():
 #    plt.legend()
 #    plt.show()
 
-#    RLGlue.RL_agent_message("save_state_reps state_reps.dat")
-    RLGlue.RL_agent_message("get_bins_from_state_reps")
-    RLGlue.RL_agent_message("save_policy qfun.dat")
+    RLGlue.RL_agent_message("save_state_reps state_reps"+str(episodesToRun)+".dat")
+    RLGlue.RL_agent_message("get_bins_from_state_reps secondcolbins"+str(episodesToRun)+".dat thirdcolbins"+str(episodesToRun)+".dat")
+    RLGlue.RL_agent_message("save_policy qfun"+str(episodesToRun)+".dat")
 
     # Transition Probs learning
     RLGlue.RL_agent_message("freeze_learning")
@@ -94,7 +94,7 @@ def trainAgent():
     print "Total steps : %d\n" % (totalSteps)
 
 #    RLGlue.RL_agent_message("savetransmatrix transitionProbs.dat")
-    RLGlue.RL_agent_message("save_phi_u_peeyu phi_mat_2000.dat u_mat_2000.dat peeyush_u_mat_2000.dat")
+    RLGlue.RL_agent_message("save_phi phi_mat"+str(episodesToRun)+".dat u_mat"+str(episodesToRun)+".dat peeyush_u_mat"+str(episodesToRun)+".dat")
 
     # Train TNN
 #    RLGlue.RL_agent_message("train_TNN")
@@ -160,9 +160,9 @@ def main():
 
     #RLGlue.RL_agent_message("load_policy agents/exampleAgent.dat")
 
-    #trainAgent()
+    trainAgent()
 
-    optionPlay()
+    #optionPlay()
 
     #RLGlue.RL_agent_message("save_policy agents/exampleAgent.dat")
 

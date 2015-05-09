@@ -1,7 +1,7 @@
 import pickle
 import numpy as np
 
-n_eps = 1000
+n_eps = 2000
 f = open('phi_mat' + str(n_eps) + '.dat','r')
 unpickler = pickle.Unpickler(f)
 phi_mat = unpickler.load()

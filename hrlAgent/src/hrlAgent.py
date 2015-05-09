@@ -12,6 +12,7 @@ from pcca import PCCA
 from deep_qnn import Deep_QNN
 from tnn import TNN
 import math
+import copy
 
 class Monster:
     def __init__(self):
@@ -58,7 +59,7 @@ class MarioAgent(Agent):
     currentOptionTime = 0
     currentOptionReward = 0.0
     numActions = 12
-    randGenerator=Random()
+    randGenerator=random.Random()
 
     def agent_init(self,taskSpecString):
         self.policy_frozen = False
@@ -100,9 +101,15 @@ class MarioAgent(Agent):
 
         #####################################################################
 
-        # Obatin T & P matrices
-        self.t_mat = 
-        self.p_mat = 
+        """
+        # Obtain T & P matrices
+        tmatfile = open('t_mat2000.dat','r')
+        unpickler = pickle.Unpickler(tmatfile)
+        self.t_mat = unpickler.load()
+
+        pmatfile = open('p_mat2000.dat','r')
+        unpickler = pickle.Unpickler(pmatfile)
+        self.p_mat = unpickler.load()
 
         # Run PCCA to obtain Chi matrix
         self.clusterer = PCCA(True)
@@ -117,9 +124,10 @@ class MarioAgent(Agent):
             self.absStateMembership.append(row.argmax())
             self.statesInAbsState[row.argmax()].append(row_i)
 
-        self.valid_states = 
+#        self.valid_states = 
 
         self.connect_mat = self.chi_mat.T*self.t_mat*self.chi_mat
+        """
 
     def egreedy(self, state):
         maxIndex=0
@@ -459,6 +467,7 @@ class MarioAgent(Agent):
             splitstring = inMessage.split()
             outfile = open(splitstring[1],'w')
             pickle.dump(enc_states,outfile)
+
         #Once we have frozen our state reps, this function discretizes them and populates the self.secondColBins and self.thirdColBins arrays
         if inMessage.startswith("get_bins_from_state_reps"):
             enc_states = []
@@ -470,6 +479,13 @@ class MarioAgent(Agent):
             self.secondColBins = self.getBins(second_col)
             third_col = enc_states[:,2]
             self.thirdColBins = self.getBins(third_col)
+
+            splitstring = inMessage.split()
+            outfile2 = open(splitstring[1],'w')
+            pickle.dump(self.secondColBins,outfile2)
+
+            outfile3 = open(splitstring[2],'w')
+            pickle.dump(self.thirdColBins,outfile3)
 
             self.discretization_done = True
 
@@ -484,7 +500,6 @@ class MarioAgent(Agent):
             puoutfile = open(splitstring[3],'w')
             pickle.dump(self.Peey_U_mat,puoutfile)
         return None
-
 
 
     #Get the discretized states. Assumes that the bins are available.
