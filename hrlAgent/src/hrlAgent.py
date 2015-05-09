@@ -47,7 +47,19 @@ backgroundLayer = {'\0': 2, '1': 1, '2': 1, '3': 1, '4': 1, '5': 1, '6': 1, '7':
 rewardLayer = {'\0': 0, '1': 0, '2': 0, '3': 0, '4': 0, '5': 0, '6': 0, '7': 0, 'M': 0, '$': 1, 'b': 1, '?': 1, '|': 1, '!': 2, ' ': 0, '\n': 0}
 
 class MarioAgent(Agent):
-    
+
+    # related to options
+    q_stepsize = 0.1
+    q_epsilon = 0.1
+    q_gamma = 0.9
+    value_function = None
+    optionCurrentlyOn = False
+    normalizationC = 0.5
+    currentOptionTime = 0
+    currentOptionReward = 0.0
+    numActions = 12
+    randGenerator=Random()
+
     def agent_init(self,taskSpecString):
         self.policy_frozen = False
         self.total_steps = 0
@@ -67,14 +79,10 @@ class MarioAgent(Agent):
         self.last_action = None
         random.seed(0)
         
-        #self.Q = QNN(nactions=12, input_size=(self.state_dim_x*self.state_dim_y), max_experiences=500, gamma=0.6, alpha=0.2)
         self.Q = Deep_QNN(nactions=12, input_size=(self.state_dim_x*self.state_dim_y), max_experiences=500, gamma=0.6, alpha=0.2)
         self.T = TNN(input_size= 4, max_experiences=500, alpha=0.2)
 
-        #self.clusterer = PCCA()
-
         self.discretization_done = False
-        
         self.n_bins = 10
         self.n_disc_states = (self.n_bins + 3)*(self.n_bins + 3)
         self.phi_mat = np.zeros((self.n_disc_states,12,self.n_disc_states),dtype=int)
@@ -85,36 +93,247 @@ class MarioAgent(Agent):
         #The (probably) incorrect U_mat that Peeyush writes in his algo
         self.Peey_U_mat = np.zeros((self.n_disc_states,12,self.n_disc_states),dtype=float)
 
-#        self.transition_matrix = {} # this is actually only counts
-#        self.transition_probs = {} # actual probabilities
         self.last_enc_state = None
         self.last_enc_action = None
 
         self.seen_expanded_states = {} #A dictionary of all the non-approximated (original Mario input) states that were seen.
 
+        #####################################################################
+
+        # Obatin T & P matrices
+        self.t_mat = 
+        self.p_mat = 
+
+        # Run PCCA to obtain Chi matrix
+        self.clusterer = PCCA(True)
+        self.chi_mat = self.clusterer.pcca(self.t_mat)
+
+        # 0,1,2,..11 - primitive actions, 12... - options
+        self.value_function=[(self.chi_mat.shape[1]+self.numActions)*[0.0] for i in range(self.chi_mat.shape[0])]
+
+        self.absStateMembership = []
+        self.statesInAbsState = [[] for i in xrange(self.chi_mat.shape[1])]
+        for (row_i,row) in enumerate(self.chi_mat):
+            self.absStateMembership.append(row.argmax())
+            self.statesInAbsState[row.argmax()].append(row_i)
+
+        self.valid_states = 
+
+        self.connect_mat = self.chi_mat.T*self.t_mat*self.chi_mat
+
+    def egreedy(self, state):
+        maxIndex=0
+        a=1
+        if self.randGenerator.random()<self.q_epsilon:
+            return self.randGenerator.randint(0,self.chi_mat.shape[1]+self.numActions-1)
+
+        temp = [(i,v) for i,v in enumerate(self.value_function[state])]
+        shuffle(temp)
+        a = max(temp,key=itemgetter(1))[0]
+
+        while a>= self.numActions and not a==np.where((np.array(-(self.connect_mat[self.absStateMembership[state]])).argsort())[0] == 1)[0][0]:
+            shuffle(temp)
+            a = max(temp,key=itemgetter(1))[0]
+
+        return a
+
     def agent_start(self,observation):
         self.step_number = 0
         self.trial_start = time.clock()
 
-        # At the start of each episode, run PCCA
-        #   chi_matrix = self.clusterer()
-        self.seen_expanded_states[tuple(self.stateEncoder(observation))] = True
+        # When learning to play with options
+        if self.option_learning_frozen == False:
+            self.optionCurrentlyOn = False
+            theState=self.getDiscretizedState(tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(observation))))
+            s = self.valid_states.index(theState) # row index
 
-        act = self.getAction(observation)
-        if self.discretization_done:
-            enc_state = tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(observation)))
-            self.last_disc_state = self.getDiscretizedState(enc_state)
-            self.last_enc_action = self.actionEncoder(act)
+            # Choose either a primitive action or option
+            a = self.egreedy(s)
+
+            if a<self.numActions:
+                # Primitive action
+                thisIntAction = a
+                self.optionCurrentlyOn = False
+                print 'Primitive action chosen'
+
+            else:    
+                # Composing an option from S_i to S_j
+                self.optionCurrentlyOn = True
+                self.currentOptionTime = 0
+                self.curentOptionStartState = s
+                self.currentOptionReward = 0.0
+
+                # 1. Find the abstract state you belong to & going to
+                self.option_S_i = self.absStateMembership[s] # initiation step
+                self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+
+                #print 'Shape of first term: ',self.p_mat[s][0].shape
+                #print self.option_S_j
+                #print 'Shape of second term: ', (self.chi_mat.T[self.option_S_j]).T.shape
+
+                #print 'Debug:'
+                #print self.chi_mat[0,0]
+
+                # 2. Choose action based on membership ascent
+                thisIntAction=1
+                maxVal = 0
+                for a in xrange(self.numActions): 
+                    print 'Action: ',a,' ',max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                    action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                    if action_pref > maxVal:
+                        thisIntAction = a
+                        maxVal = action_pref
+                    print 'Option chosen'
+
+                self.currentOptionTime += 1
+
+            print 'Action chosen: ',thisIntAction
+
+            act=Action()
+            act.intArray=[thisIntAction]        
+
+        # When learning transition probabilities
+        if self.transition_learning_frozen == False:
+            act = self.getAction(observation)
+            if self.discretization_done:
+                enc_state = tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(observation)))
+                self.last_disc_state = self.getDiscretizedState(enc_state)
+                self.last_enc_action = self.actionEncoder(act)
+
+        # When using QNN
+        if self.policy_frozen == False:
+            self.seen_expanded_states[tuple(self.stateEncoder(observation))] = True
+            act = self.getAction(observation)
+
+        self.last_action = copy.deepcopy(act)
+        self.last_state  = copy.deepcopy(observation)    
+
         return act
-    
+ 
     def agent_step(self,reward, observation):
-        #self.printFullState(observation)
-        #self.printMarioState(observation)
         self.step_number += 1
         self.total_steps += 1
-        act = self.getAction(observation)
 
-        if (not self.transition_learning_frozen):
+        # When learning to play with options
+        if self.option_learning_frozen == False:        
+            newState = self.getDiscretizedState(tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(observation))))
+            lastState = self.getDiscretizedState(tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(last_state))))
+            lastAction = self.last_action.intArray[0]
+
+            s = self.valid_states.index(newState) # row index
+
+            # Check if an option is going on
+            if self.optionCurrentlyOn:
+
+                # add reward to ongoing option
+                self.currentOptionReward += reward
+
+                # Decide whether to terminate option
+                beta = min(math.log(self.chi_mat[s,self.option_S_i])/math.log(self.chi_mat[s,self.option_S_j]),1)
+                if self.randGenerator.random() < beta:
+                    self.optionCurrentlyOn = False
+                    print 'Terminated option'
+
+                    # Update Q value of terminated option
+                    Q_sa=self.value_function[self.curentOptionStartState][self.numActions+self.option_S_j] # 4... - options
+                    max_Q_sprime_a = max(self.value_function[self.valid_states.index(newState)])     
+                    new_Q_sa=Q_sa + self.q_stepsize  * (self.currentOptionReward + math.pow(self.q_gamma,self.currentOptionTime) * max_Q_sprime_a - Q_sa)
+                    self.value_function[self.curentOptionStartState][self.numActions+self.option_S_j]=new_Q_sa                
+
+                    # Choose either a primitive action or option
+                    a = self.egreedy(s)
+
+                    if a<self.numActions:
+                        # Primitive action
+                        newIntAction = a
+                        self.optionCurrentlyOn = False
+                        print 'Primitive action chosen'
+
+                    else:    
+                        # Composing an option from S_i to S_j
+                        self.optionCurrentlyOn = True
+                        self.currentOptionTime = 0
+                        self.curentOptionStartState = s
+                        self.currentOptionReward = 0.0
+
+                        # 1. Find the abstract state you belong to & going to
+                        self.option_S_i = self.absStateMembership[s] # initiation step
+                        self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+
+                        # 2. Choose action based on membership ascent
+                        newIntAction=1
+                        maxVal = 0
+                        for a in xrange(self.numActions): 
+                            print 'Action: ',a,' ',max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                            action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                            if action_pref > maxVal:
+                                newIntAction = a
+                                maxVal = action_pref
+                            print 'Option chosen'
+                        self.currentOptionTime += 1
+
+                else:
+                    # If not terminated, choose action based on membership ascent
+                    newIntAction=1
+                    maxVal = 0
+                    for a in xrange(self.numActions): 
+                        print 'Action: ',a,' ',max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                        action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                        if action_pref > maxVal:
+                            newIntAction = a
+                            maxVal = action_pref
+                    self.currentOptionTime += 1
+
+            # No option currently running
+            else:
+
+                # update Q-value of last primitive action
+                Q_sa=self.value_function[self.valid_states.index(lastState)][lastAction]
+                max_Q_sprime_a = max(self.value_function[self.valid_states.index(newState)])     
+                new_Q_sa=Q_sa + self.q_stepsize  * (reward + self.q_gamma * max_Q_sprime_a - Q_sa)
+                self.value_function[self.valid_states.index(lastState)][lastAction]=new_Q_sa
+
+                # Choose either a primitive action or option
+                a = self.egreedy(s)
+
+                if a<self.numActions:
+                    # Primitive action
+                    newIntAction = a
+                    self.optionCurrentlyOn = False
+                    print 'Primitive action chosen'
+
+                else:    
+                    # Composing an option from S_i to S_j
+                    self.optionCurrentlyOn = True
+                    self.currentOptionTime = 0
+                    self.curentOptionStartState = s
+                    self.currentOptionReward = 0.0
+
+                    # 1. Find the abstract state you belong to & going to
+                    self.option_S_i = self.absStateMembership[s] # initiation step
+                    self.option_S_j = np.where((np.array(-(self.connect_mat[self.option_S_i])).argsort())[0] == 1)[0][0] # actually, we will have to choose S_j based on SMDP
+
+                    # 2. Choose action based on membership ascent
+                    newIntAction=1
+                    maxVal = 0
+                    for a in xrange(self.numActions): 
+                        print 'Action: ',a,' ',max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                        action_pref = max(self.normalizationC*(np.sum(np.dot(np.array(self.p_mat[s][a]),np.array(self.chi_mat.T[self.option_S_j].T))) - self.chi_mat[s,self.option_S_j]),0)
+                        if action_pref > maxVal:
+                            newIntAction = a
+                            maxVal = action_pref
+                        print 'Option chosen'
+                    self.currentOptionTime += 1
+            
+            print 'Action chosen: ',newIntAction
+
+            act=Action()
+            act.intArray=[newIntAction]
+
+
+        # When learning transition probabilities
+        if self.transition_learning_frozen == False:
+            act = self.getAction(observation)
             enc_state = tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(observation)))
             disc_state = self.getDiscretizedState(enc_state)
             enc_action = self.actionEncoder(act)        
@@ -136,12 +355,15 @@ class MarioAgent(Agent):
             self.last_enc_action = enc_action
             self.last_disc_state = disc_state
 
-        if (not self.policy_frozen):
+        # When using QNN
+        if self.policy_frozen == False:
+            act = self.getAction(observation)    
             self.seen_expanded_states[tuple(self.stateEncoder(observation))] = True
             self.update(observation, act, reward)
 
-        self.last_state = observation
-        self.last_action = act
+        self.last_action = copy.deepcopy(act)
+        self.last_state  = copy.deepcopy(observation)    
+
         return act
     
     def agent_end(self,reward):
@@ -149,6 +371,24 @@ class MarioAgent(Agent):
         print "ended after " + str(self.total_steps) + " total steps"
         print "average " + str(self.step_number/time_passed) + " steps per second"
     
+        # When learning to play using options
+        if self.option_learning_frozen == False:
+            lastState = self.getDiscretizedState(tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(last_state))))
+            lastAction = self.last_action.intArray[0]
+
+            if self.optionCurrentlyOn:
+                self.currentOptionReward += reward
+                # Update Q value of terminated option
+                Q_sa=self.value_function[self.curentOptionStartState][self.numActions+self.option_S_j] # 4... - options 
+                new_Q_sa=Q_sa + self.q_stepsize  * (self.currentOptionReward - Q_sa)
+                self.value_function[self.curentOptionStartState][self.numActions+self.option_S_j]=new_Q_sa                
+            else:
+                # update Q-value of last primitive action
+                Q_sa=self.value_function[self.valid_states.index(lastState)][lastAction]    
+                new_Q_sa=Q_sa + self.q_stepsize  * (reward - Q_sa)
+                self.value_function[self.valid_states.index(lastState)][lastAction]=new_Q_sa
+
+
     def agent_cleanup(self):
         pass
     
@@ -193,6 +433,12 @@ class MarioAgent(Agent):
         if inMessage.startswith("unfreeze_transition_learning"):
             self.transition_learning_frozen=False
             return "message understood, transition learning unfrozen"        
+        if inMessage.startswith("freeze_option_learning"):
+            self.option_learning_frozen=True
+            return "message understood, option learning frozen"    
+        if inMessage.startswith("unfreeze_option_learning"):
+            self.option_learning_frozen=False
+            return "message understood, option learning unfrozen"   
         if inMessage.startswith("train_TNN"):
             print 'Training TNN'
             self.trainTNN()
@@ -238,6 +484,8 @@ class MarioAgent(Agent):
             puoutfile = open(splitstring[3],'w')
             pickle.dump(self.Peey_U_mat,puoutfile)
         return None
+
+
 
     #Get the discretized states. Assumes that the bins are available.
     def getDiscretizedState(self,enc_state):

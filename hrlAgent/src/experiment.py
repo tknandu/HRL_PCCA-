@@ -7,8 +7,8 @@ import rlglue.RLGlue as RLGlue
 import matplotlib.pyplot as plt
 from consoleTrainerHelper import *
 
-def trainAgent():
-    episodesToRun = 10 # param
+def trainAgent_learnT():
+    episodesToRun = 2000 # param
     exp = 1.0 # epsilon?
 
     totalSteps = 0
@@ -39,6 +39,8 @@ def trainAgent():
     # First, we unfreeze learning to train QNN. Once trained, we also have state representations (hidden layer output of trained network).
     # Next, we freeze layer and only learn the transition probabilities.
     
+    RLGlue.RL_agent_message("freeze_option_learning")
+
     RLGlue.RL_agent_message("unfreeze_learning")
     RLGlue.RL_agent_message("freeze_transition_learning")
     raw_results = []
@@ -92,10 +94,34 @@ def trainAgent():
     print "Total steps : %d\n" % (totalSteps)
 
 #    RLGlue.RL_agent_message("savetransmatrix transitionProbs.dat")
-    RLGlue.RL_agent_message("save_phi_u_peeyu phi_mat.dat u_mat.dat peeyush_u_mat.dat")
+    RLGlue.RL_agent_message("save_phi_u_peeyu phi_mat_2000.dat u_mat_2000.dat peeyush_u_mat_2000.dat")
 
     # Train TNN
 #    RLGlue.RL_agent_message("train_TNN")
+
+
+#####################################################################################################################
+
+def optionPlay():
+    episodesToRun = 50
+    totalSteps = 0    
+
+    RLGlue.RL_agent_message("freeze_learning")
+    RLGlue.RL_agent_message("freeze_transition_learning")
+    RLGlue.RL_agent_message("unfreeze_option_learning")
+    RLGlue.RL_agent_message("load_policy qfun2000.dat")
+
+    for i in range(episodesToRun):
+        RLGlue.RL_episode(2000)
+        thisSteps = RLGlue.RL_num_steps()
+        print "Total steps in episode %d is %fd" %(i, thisSteps)
+        thisReturn = RLGlue.RL_return()
+        print "Total return in episode %d is %f" %(i, thisReturn)
+        totalSteps += thisSteps
+    print "Total steps : %d\n" % (totalSteps)
+
+
+#####################################################################################################################
 
 def testAgent():
     episodesToRun = 50
@@ -134,7 +160,9 @@ def main():
 
     #RLGlue.RL_agent_message("load_policy agents/exampleAgent.dat")
 
-    trainAgent()
+    #trainAgent()
+
+    optionPlay()
 
     #RLGlue.RL_agent_message("save_policy agents/exampleAgent.dat")
 
