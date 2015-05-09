@@ -195,7 +195,7 @@ class PCCA():
             try:
                 print n_clusters
                 (chi_matrix, rot_matrix) = self.cluster_by_isa(eigvectors, n_clusters)[2:]
-                assert False
+                break
             except np.linalg.linalg.LinAlgError:
                 n_clusters -= 1
 

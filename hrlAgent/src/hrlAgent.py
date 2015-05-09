@@ -105,13 +105,25 @@ class MarioAgent(Agent):
         #####################################################################
 
         # Obtain T & P matrices
-        tmatfile = open('noreward_t_mat' + str(self.episodesRun) + '.dat','r')
+
+        self.using_compressed_mats = True #Set true if we're ignoring discretized states that aren't visited
+        if self.using_compressed_mats:
+            tmatfile = open('comp_noreward_t_mat' + str(self.episodesRun) + '.dat','r')
+        else:
+            tmatfile = open('noreward_t_mat' + str(self.episodesRun) + '.dat','r')
         unpickler = pickle.Unpickler(tmatfile)
         self.t_mat = unpickler.load()
 
-        pmatfile = open('noreward_p_mat' + str(self.episodesRun) + '.dat','r')
+        if self.using_compressed_mats:
+            pmatfile = open('comp_noreward_p_mat' + str(self.episodesRun) + '.dat','r')
+        else:
+            pmatfile = open('noreward_p_mat' + str(self.episodesRun) + '.dat','r')
         unpickler = pickle.Unpickler(pmatfile)
         self.p_mat = unpickler.load()
+
+        validstatesfile = open('comp_valid_states'+str(self.episodesRun)+'.dat','r') 
+        unpickler = pickle.Unpickler(validstatesfile)
+        self.valid_states = unpickler.load()
 
         # Run PCCA to obtain Chi matrix
         self.clusterer = PCCA(True)
@@ -518,7 +530,12 @@ class MarioAgent(Agent):
         second_elem = enc_state[1][0]
         third_elem = enc_state[2][0]
         disc_tuple = (np.digitize([second_elem],self.secondColBins)[0],np.digitize([third_elem],self.thirdColBins)[0])
-        return (self.n_bins+3)*disc_tuple[0]+disc_tuple[1]
+        
+        flat_disc_state = (self.n_bins+3)*disc_tuple[0]+disc_tuple[1]
+        if self.using_compressed_mats:
+            return self.valid_states.index(flat_disc_state) 
+        else:
+            return flat_disc_state
 
     def getBins(self,i_array):
         bins = [0.0]
