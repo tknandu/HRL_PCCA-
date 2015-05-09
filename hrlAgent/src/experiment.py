@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from consoleTrainerHelper import *
 
 def trainAgent():
-    episodesToRun = 100 # param
+    episodesToRun = 2000 # param
     exp = 1.0 # epsilon?
 
     totalSteps = 0
@@ -109,7 +109,7 @@ def optionPlay():
     RLGlue.RL_agent_message("freeze_learning")
     RLGlue.RL_agent_message("freeze_transition_learning")
     RLGlue.RL_agent_message("unfreeze_option_learning")
-    RLGlue.RL_agent_message("load_policy qfun2000.dat")
+    RLGlue.RL_agent_message("load_policy qfun100.dat")
 
     for i in range(episodesToRun):
         RLGlue.RL_episode(2000)
@@ -160,9 +160,9 @@ def main():
 
     #RLGlue.RL_agent_message("load_policy agents/exampleAgent.dat")
 
-    trainAgent()
+    #trainAgent()
 
-    #optionPlay()
+    optionPlay()
 
     #RLGlue.RL_agent_message("save_policy agents/exampleAgent.dat")
 
