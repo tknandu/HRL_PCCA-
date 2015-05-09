@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from consoleTrainerHelper import *
 
 def trainAgent():
-    episodesToRun = 100 # param
+    episodesToRun = 1000 # param
     exp = 1.0 # epsilon?
 
     totalSteps = 0
