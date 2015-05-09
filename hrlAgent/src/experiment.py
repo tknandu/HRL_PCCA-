@@ -7,7 +7,7 @@ import rlglue.RLGlue as RLGlue
 import matplotlib.pyplot as plt
 from consoleTrainerHelper import *
 
-def trainAgent_learnT():
+def trainAgent():
     episodesToRun = 2000 # param
     exp = 1.0 # epsilon?
 
