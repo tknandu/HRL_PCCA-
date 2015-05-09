@@ -13,6 +13,7 @@ from deep_qnn import Deep_QNN
 from tnn import TNN
 import math
 import copy
+from operator import itemgetter
 
 class Monster:
     def __init__(self):
@@ -103,7 +104,6 @@ class MarioAgent(Agent):
 
         #####################################################################
 
-        """
         # Obtain T & P matrices
         tmatfile = open('t_mat' + str(self.episodesRun) + '.dat','r')
         unpickler = pickle.Unpickler(tmatfile)
@@ -115,7 +115,10 @@ class MarioAgent(Agent):
 
         # Run PCCA to obtain Chi matrix
         self.clusterer = PCCA(True)
-        self.chi_mat = self.clusterer.pcca(self.t_mat)
+        self.chi_mat = np.mat(self.clusterer.pcca(self.t_mat))
+
+        #Converting to np.mat format for consistency with 3 room code. Doing it only here because pcca needs it as ndarray
+        self.t_mat = np.mat(self.t_mat)
 
         # 0,1,2,..11 - primitive actions, 12... - options
         self.value_function=[(self.chi_mat.shape[1]+self.numActions)*[0.0] for i in range(self.chi_mat.shape[0])]
@@ -129,7 +132,6 @@ class MarioAgent(Agent):
 #        self.valid_states =  NOT NECESSARY IN MARIO
 
         self.connect_mat = self.chi_mat.T*self.t_mat*self.chi_mat
-        """
 
     def egreedy(self, state):
         maxIndex=0
@@ -138,11 +140,11 @@ class MarioAgent(Agent):
             return self.randGenerator.randint(0,self.chi_mat.shape[1]+self.numActions-1)
 
         temp = [(i,v) for i,v in enumerate(self.value_function[state])]
-        shuffle(temp)
+        random.shuffle(temp)
         a = max(temp,key=itemgetter(1))[0]
 
         while a>= self.numActions and not a==np.where((np.array(-(self.connect_mat[self.absStateMembership[state]])).argsort())[0] == 1)[0][0]:
-            shuffle(temp)
+            random.shuffle(temp)
             a = max(temp,key=itemgetter(1))[0]
 
         return a
@@ -200,8 +202,7 @@ class MarioAgent(Agent):
 
             print 'Action chosen: ',thisIntAction
 
-            act=Action()
-            act.intArray=[thisIntAction]        
+            act=self.actionDecoder(thisIntAction)
 
         # When learning transition probabilities
         if self.transition_learning_frozen == False:
@@ -228,7 +229,7 @@ class MarioAgent(Agent):
         # When learning to play with options
         if self.option_learning_frozen == False:        
             newState = self.getDiscretizedState(tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(observation))))
-            lastState = self.getDiscretizedState(tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(last_state))))
+            lastState = self.getDiscretizedState(tuple(self.Q.getHiddenLayerRepresentation(self.stateEncoder(self.last_state))))
             lastAction = self.last_action.intArray[0]
 
             s = newState
@@ -339,9 +340,7 @@ class MarioAgent(Agent):
             
             print 'Action chosen: ',newIntAction
 
-            act=Action()
-            act.intArray=[newIntAction]
-
+            act = self.actionDecoder(newIntAction)
 
         # When learning transition probabilities
         if self.transition_learning_frozen == False:
@@ -421,12 +420,12 @@ class MarioAgent(Agent):
         if inMessage.startswith("save_policy"):
             splitString=inMessage.split(" ")
             self.saveQFun(splitString[1])
-            print "Saved."
+            print "Q function saved."
             return "message understood, saving policy"
         if inMessage.startswith("load_policy"):
             splitString=inMessage.split(" ")
             self.loadQFun(splitString[1])
-            print "Loaded."
+            print "Q function loaded."
             return "message understood, loading policy"
         if inMessage.startswith("use_impactful_experiences"):
             self.Q.use_impactful = True
@@ -512,7 +511,7 @@ class MarioAgent(Agent):
         unpickler = pickle.Unpickler(secondcolfile)
         self.secondColBins = unpickler.load()
 
-        thirddcolfile = open('thirdcolbins' + str(self.episodesRun) + '.dat','r')
+        thirdcolfile = open('thirdcolbins' + str(self.episodesRun) + '.dat','r')
         unpickler = pickle.Unpickler(thirdcolfile)
         self.thirdColBins = unpickler.load()
 
